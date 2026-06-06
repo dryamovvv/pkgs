@@ -35,3 +35,10 @@ echo "builder ALL=(ALL) NOPASSWD: ALL" >>/etc/sudoers
 chown -R builder:builder "$PKGDIR"
 cd "$PKGDIR"
 su builder -c "makepkg -s --noconfirm"
+
+# Debug: list created package files
+echo "=== Created packages in $(pwd) ==="
+ls -la *.pkg.tar.* 2>/dev/null || echo "No .pkg.tar.* files found in pwd"
+ls -la ~/*.pkg.tar.* 2>/dev/null || echo "No .pkg.tar.* files found in HOME"
+echo "=== Full workspace listing ==="
+find /home/runner/work -name '*.pkg.tar.*' -type f 2>/dev/null | head -10 || echo "No .pkg.tar.* files found anywhere"

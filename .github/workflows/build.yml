@@ -33,8 +33,6 @@ jobs:
   build:
     needs: detect
     runs-on: ubuntu-24.04-arm
-    env:
-      PKG: ${{ matrix.pkg }}
     strategy:
       matrix:
         pkg: ${{ fromJson(needs.detect.outputs.matrix) }}
@@ -42,13 +40,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build in container
         run: |
-          docker run --privileged \
-            -v ${{ github.workspace }}:${{ github.workspace }} \
-            -w ${{ github.workspace }} \
-            lfdevs/archlinuxarm:base-devel \
-            bash -c "ci/build-package.sh ${PKG}"
+          docker rm -f builder 2>/dev/null || true
+          docker run -d --name builder --privileged \
+            lfdevs/archlinuxarm:base-devel sleep infinity
+          docker cp . builder:/workspace/
+          docker exec builder bash -c "cd /workspace && ci/build-package.sh ${PKG}"
+          docker cp builder:/workspace/packages ./
+          docker rm -f builder
       - name: List packages
-        run: find packages -name '*.pkg.tar.zst' -type f
+        run: find packages -name '*.pkg.tar.zst' -type f -ls
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

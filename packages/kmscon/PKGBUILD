@@ -1,0 +1,64 @@
+# Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
+# Contributor: dryamovvv (Arch Linux package)
+# Optimized for Raspberry Pi 5 (Cortex-A76)
+pkgname=kmscon
+pkgver=10.0.0
+pkgrel=1
+pkgdesc="KMS/DRM terminal emulator optimized for Raspberry Pi 5 (Cortex-A76)"
+arch=('aarch64')
+url="https://github.com/kmscon/kmscon"
+license=('MIT')
+depends=(
+  'glibc'
+  'libdrm'
+  'libtsm'
+  'libxkbcommon'
+  'pango'
+  'freetype2'
+  'fontconfig'
+  'pixman'
+  'systemd-libs'
+  'zlib'
+)
+makedepends=(
+  'gcc'
+  'meson'
+  'ninja'
+  'python'
+)
+provides=('kmscon')
+conflicts=('kmscon')
+source=(
+  "kmscon-$pkgver.tar.gz::https://github.com/kmscon/kmscon/archive/refs/tags/v$pkgver.tar.gz"
+  "kmscon.conf"
+  "kmscon_toggle.sh"
+)
+sha256sums=('SKIP' 'SKIP' 'SKIP')
+
+build() {
+  CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe" \
+  CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe" \
+  meson setup build \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --buildtype=release \
+    -Dfont_pango=enabled \
+    -Dfont_freetype=enabled \
+    -Dvideo_drm3d=disabled \
+    -Dlibseat=disabled \
+    -Ddbus=disabled \
+    -Ddocs=disabled \
+    -Dtests=disabled
+  ninja -C build
+}
+
+check() {
+  ninja -C build test || true
+}
+
+package() {
+  DESTDIR="$pkgdir" ninja -C build install
+
+  install -Dm644 "$srcdir/kmscon.conf" "$pkgdir/etc/kmscon/kmscon.conf"
+  install -Dm755 "$srcdir/kmscon_toggle.sh" "$pkgdir/usr/bin/kmscon-toggle"
+}

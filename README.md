@@ -19,13 +19,20 @@ sudo pacman -Sy
 
 ## Флаги оптимизации
 
+| Флаг                          | Значение                                                       |
+| ----------------------------- | -------------------------------------------------------------- |
+| `-mcpu=cortex-a76+crypto`     | ARMv8.2-A + AES/SHA/PMULL; crc, lse, rdma, fp16, dotprod, rcpc |
+| `-O2`                         | Стандартная оптимизация                                        |
+| `-pipe`                       | Пайпы вместо временных файлов                                  |
+| `-Wl,-z,max-page-size=0x4000` | 16K ELF-сегменты (размер страницы RPi5)                        |
+
 ```
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+LDFLAGS="-Wl,-z,max-page-size=0x4000"
 ```
 
-- `-mcpu=cortex-a76` — включает armv8.2-a, crc, lse, rdma, fp16, dotprod, rcpc, fp+simd
-- `+crypto` — AES, SHA1/SHA2, PMULL
-- `-mtune` избыточен (GCC выводит из `-mcpu`)
+Доп. компиляторы: Rust (`-C target-cpu=cortex-a76 -C opt-level=2`), Go (`GOARCH=arm64 GOARM64=v8.2`).
 
 ## Добавление пакета
 
@@ -48,14 +55,17 @@ pkgs/
 │   │   └── PKGBUILD
 │   └── ...
 ├── ci/
-│   ├── build-package.sh   # Обёртка сборки в контейнере
+│   ├── build-package.sh   # Сборка в контейнере (ccache, makepkg)
+│   ├── deploy-package.sh   # Деплой в gh-pages с retry
 │   └── detect-changes.sh  # Детект изменённых пакетов
 ├── .github/workflows/
-│   └── build.yml          # CI/CD: сборка + деплой
+│   └── build.yml          # CI/CD: detect → build+deploy matrix
 └── README.md
 ```
 
-## Требования
+## CI
 
-- GitHub Pages включён в режиме **GitHub Actions**
-- Нативный ARM64-раннер (`ubuntu-24.04-arm`)
+- **Кэши:** Docker image, pacman, ccache (по PKGBUILD hash), Cargo
+- **Деплой:** git push в gh-pages с retry при конфликтах
+- **Отладка:** tmate SSH через `workflow_dispatch` с `debug_enabled: true`
+- **Таймаут:** 90 мин на сборку

@@ -98,8 +98,8 @@ jobs:
           docker run -d --name builder \
             -v /tmp/pacman-cache:/var/cache/pacman/pkg \
             -v /tmp/ccache:/ccache \
-            -v /tmp/cargo-registry:/root/.cargo/registry \
-            -v /tmp/cargo-git:/root/.cargo/git \
+            -v /tmp/cargo-registry:/home/builder/.cargo/registry \
+            -v /tmp/cargo-git:/home/builder/.cargo/git \
             lfdevs/archlinuxarm:base-devel sleep infinity
           docker cp . builder:/workspace/
           docker exec builder bash -c "cd /workspace && ci/build-package.sh ${{ matrix.pkg }}"

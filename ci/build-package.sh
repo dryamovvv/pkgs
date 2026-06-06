@@ -39,7 +39,7 @@ useradd -m builder
 echo "builder ALL=(ALL) NOPASSWD: ALL" >>/etc/sudoers
 
 # Build
-chown -R builder:builder "$PKGDIR" /ccache
+chown -R builder:builder "$PKGDIR" /ccache /home/builder/.cargo 2>/dev/null || true
 cd "$PKGDIR"
 su builder -c "makepkg -s --noconfirm"
 

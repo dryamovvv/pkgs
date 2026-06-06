@@ -15,8 +15,8 @@ echo "=== Building package: $PKG ==="
 pacman-key --init
 pacman-key --populate archlinuxarm
 
-# Ensure sudo is available
-pacman -Syu --noconfirm --needed sudo
+# Sync databases and install sudo if not present
+pacman -Sy --noconfirm --needed sudo
 
 # Set up RPi5-optimized makepkg.conf (Cortex-A76)
 cat >>/etc/makepkg.conf <<'EOF'

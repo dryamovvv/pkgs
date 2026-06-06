@@ -3,7 +3,11 @@ name: Build and Deploy
 on:
   push:
     branches: [main]
-    paths: ["packages/**"]
+    paths:
+      - "packages/**"
+      - "ci/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
 
 permissions:
   contents: read

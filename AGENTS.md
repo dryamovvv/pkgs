@@ -42,7 +42,7 @@ CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 
 1. **detect** — `git diff --name-only HEAD~1 -- packages/`, формирует matrix пакетов (на ubuntu-latest)
 2. **build** — matrix job: `runs-on: ubuntu-24.04-arm`, Docker `lfdevs/archlinuxarm:base-devel` + `docker cp`, сборка `makepkg -s --noconfirm` с RPi5 CFLAGS
-3. **deploy** — `repo-add` внутри arch-контейнера, генерация index.html, `actions/deploy-pages@v4`
+3. **deploy** — `runs-on: ubuntu-24.04-arm`, Docker `lfdevs/archlinuxarm:base-devel`, `repo-add` внутри arch-контейнера, генерация index.html, `actions/deploy-pages@v4`
 
 Особенности:
 
@@ -50,7 +50,8 @@ CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 - При изменении `ci/` или `.github/workflows/` — пересборка всех пакетов
 - Если изменений в `packages/` нет — `detect` выдаёт `[]`, сборка скипается
 - В build-контейнере: `pacman-key --init && pacman-key --populate archlinuxarm`, создаётся пользователь `builder`
-- Сборка через `docker run -d ... sleep infinity` + `docker cp` внутрь/наружу — решает проблему видимости артефактов
+- Сборка через `docker run -d ... sleep infinity` + `docker cp` внутрь/наружу — решает проблему видимости артефактов (volume-монтирование нестабильно на GitHub Actions ARM64)
+- Артефакты сборки загружаются как `.pkg.tar.*` (может быть `.xz` или `.zst`)
 
 ## Конфигурация pacman на RPi5
 
@@ -60,13 +61,15 @@ SigLevel = Optional TrustedOnly
 Server = https://dryamovvv.github.io/pkgs/aarch64
 ```
 
-## Базовые команды
-
-- `repo-add repo.db.tar.gz *.pkg.tar.zst` — создать/обновить базу репозитория
-- `makepkg -s --noconfirm` — собрать пакет с установкой зависимостей
-- `pacman -Sy` — синхронизировать репозитории на клиенте
-
 ## Добавление пакета
+
+При добавлении нового пакета:
+
+1. **Изучить возможности пакета** — изучить его документацию, `meson_options.txt`, `CMakeLists.txt`, `configure --help` и т.д. на предмет опциональных фич.
+2. **Интерактивно спросить пользователя** о каждой опциональной фиче — объяснить, что фича даёт, какие зависимости тянет, и спросить включать или нет. Не принимать решения за пользователя.
+3. **Документация всегда включается** — man-страницы и прочая документация (`-Ddocs=enabled`, `--enable-docs`, etc.) собираются по умолчанию. Если нужны дополнительные makedepends (например, `libxslt`, `docbook-xsl`, `doxygen`), они добавляются в `makedepends=()`.
+4. **Создать PKGBUILD** с учётом выбранных опций.
+5. **Использовать реальные SHA256** для всех upstream-исходников. Для локальных файлов — `'SKIP'`.
 
 ```bash
 mkdir packages/<pkg-name>

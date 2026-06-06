@@ -79,15 +79,27 @@ jobs:
           key: ccache-v2-${{ matrix.pkg }}-${{ hashFiles(format('packages/{0}/PKGBUILD', matrix.pkg)) }}
           restore-keys: ccache-v2-${{ matrix.pkg }}-
 
+      # ── Cargo cache (Rust) ──
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            /tmp/cargo-registry
+            /tmp/cargo-git
+          key: cargo-v2-${{ matrix.pkg }}-${{ hashFiles(format('packages/{0}/PKGBUILD', matrix.pkg)) }}
+          restore-keys: cargo-v2-${{ matrix.pkg }}-
+
       # ── Build ──
       - name: Build in container
         timeout-minutes: 90
         run: |
-          mkdir -p /tmp/pacman-cache /tmp/ccache
+          mkdir -p /tmp/pacman-cache /tmp/ccache /tmp/cargo-registry /tmp/cargo-git
           docker rm -f builder 2>/dev/null || true
           docker run -d --name builder \
             -v /tmp/pacman-cache:/var/cache/pacman/pkg \
             -v /tmp/ccache:/ccache \
+            -v /tmp/cargo-registry:/root/.cargo/registry \
+            -v /tmp/cargo-git:/root/.cargo/git \
             lfdevs/archlinuxarm:base-devel sleep infinity
           docker cp . builder:/workspace/
           docker exec builder bash -c "cd /workspace && ci/build-package.sh ${{ matrix.pkg }}"

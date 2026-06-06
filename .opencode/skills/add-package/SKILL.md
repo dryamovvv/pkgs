@@ -20,6 +20,19 @@ Find upstream — GitHub, GitLab, official site. Determine:
 - Dependencies (build-time and runtime)
 - Whether the release tarball includes submodules — if not, use git-based source
 
+**Then look up build configuration on Context7** for maximum coverage:
+
+1. Resolve the library ID: `context7_resolve-library-id` with the package name and "build configuration options dependencies"
+2. Query docs: `context7_query-docs` with the resolved ID and a query like "meson options CMake build configuration optional features dependencies"
+3. Use findings to:
+   - Discover **all** optional features the package supports (not just what README mentions)
+   - Find exact **CMake/meson option names and types** (boolean vs feature, ON/OFF vs enabled/disabled)
+   - Identify **dependency names** as they appear in the build system
+   - Catch **version-specific** differences (e.g., options renamed between releases)
+4. Combine Context7 findings with GitHub source inspection to build the complete feature list for Step 2
+
+This ensures the user can configure every available option, not just the obvious ones.
+
 ### 2. Present options to the user
 
 For EACH optional feature of the package:

@@ -85,7 +85,7 @@ jobs:
         run: |
           mkdir -p /tmp/pacman-cache /tmp/ccache
           docker rm -f builder 2>/dev/null || true
-          docker run -d --name builder --privileged \
+          docker run -d --name builder \
             -v /tmp/pacman-cache:/var/cache/pacman/pkg \
             -v /tmp/ccache:/ccache \
             lfdevs/archlinuxarm:base-devel sleep infinity

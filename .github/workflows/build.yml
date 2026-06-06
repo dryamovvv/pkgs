@@ -8,6 +8,12 @@ on:
       - "ci/**"
       - ".github/workflows/**"
   workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: "Enable tmate SSH debugging (connect to CI container)"
+        required: false
+        default: false
 
 permissions:
   contents: write
@@ -83,6 +89,14 @@ jobs:
         run: |
           docker cp builder:/workspace/packages ./packages-built
           find packages-built -name '*.pkg.tar.*' -type f -ls
+
+      # ── Debug via SSH (only on manual trigger with debug_enabled=true) ──
+      - name: Setup tmate session
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+          timeout-minutes: 30
 
       # ── Deploy (inside container, retry-based) ──
       - name: Deploy to repository

@@ -28,6 +28,7 @@ GH_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GH_REPO}.git"
 for attempt in $(seq 1 10); do
   echo "=== Deploy attempt $attempt/10 ==="
 
+  cd /workspace
   rm -rf /tmp/repo
 
   # Clone existing gh-pages or create fresh
@@ -48,8 +49,10 @@ for attempt in $(seq 1 10); do
     git checkout --orphan gh-pages
     git rm -rf . 2>/dev/null || true
     mkdir -p aarch64
+    # Create a placeholder so git can commit (empty dirs aren't tracked)
+    echo "aarch64 repository" >aarch64/.gitkeep
     git add aarch64
-    git commit -m "init: gh-pages branch for aarch64 repository" || true
+    git commit -m "init: gh-pages branch for aarch64 repository"
     git push origin gh-pages || {
       echo "Push failed (another job created gh-pages?), retrying..."
       sleep 3

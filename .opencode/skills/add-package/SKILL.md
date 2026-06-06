@@ -85,8 +85,28 @@ package() {
 - `sha256sums`: скачать source, вычислить `sha256sum`, вставить реальные хеши. Для локальных файлов (конфиги) — `'SKIP'`.
 - `check()` всегда с `|| true` — тесты не должны блокировать сборку.
 - `depends` — runtime-зависимости, `makedepends` — только для сборки.
-- CFLAGS/CXXFLAGS всегда с `-mcpu=cortex-a76+crypto -O2 -pipe`.
 - `buildtype=release` для meson, `--with-release` или аналоги для других.
+
+### RPi5 Cortex-A76 оптимизация для всех компиляторов
+
+**Обязательно** для любого кода на любом языке (C, C++, Rust через `RUSTFLAGS`, Go через `GOFLAGS`, ассемблер и т.д.):
+
+```
+CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+LDFLAGS="-Wl,-z,max-page-size=0x10000"
+```
+
+| Флаг                           | Значение                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `-mcpu=cortex-a76+crypto`      | ARMv8.2-A + AES/SHA/PMULL; включает crc, lse, rdma, fp16, dotprod, rcpc                                       |
+| `-O2`                          | Стандартная оптимизация (включает `-fomit-frame-pointer` на AArch64)                                          |
+| `-pipe`                        | Передача через пайпы вместо временных файлов                                                                  |
+| `-Wl,-z,max-page-size=0x10000` | Выравнивание ELF-сегментов на 64K — гарантирует совместимость со всеми размерами страниц ARM64 (4K, 16K, 64K) |
+
+- **Rust:** `RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"`
+- **Go:** `GOFLAGS="-ldflags=-extldflags=-Wl,-z,max-page-size=0x10000"` + `GOARCH=arm64 GOARM64=v8.2`
+- `-mtune` не нужен (GCC выводит из `-mcpu`)
 
 ### 4. Создать директорию и закоммитить
 
@@ -99,9 +119,23 @@ git commit -m "feat: add <pkg-name> <version>"
 git push
 ```
 
-### 5. Проверить CI
+### 5. Проверить CI до полного успеха
 
-После пуша проверить сборку: `gh run watch` (или `gh run list`).
+**Не останавливаться, пока пакет не собран и не задеплоен.** После `git push`:
+
+1. Запустить наблюдение: `gh run watch` (следит в реальном времени)
+2. Если сборка упала — прочитать логи: `gh run view <run-id> --log --job=<job-id>`
+3. Исправить ошибку в PKGBUILD/патчах, закоммитить `fix: ...`, запушить
+4. Повторить с шага 1
+5. Остановиться только когда все три job-а (`detect`, `build`, `deploy`) — **success**
+
+**Чек-лист успешной сборки:**
+
+- [ ] `detect` — success
+- [ ] `build (<pkg-name>)` — success
+- [ ] `deploy` — success
+- [ ] `https://dryamovvv.github.io/pkgs/aarch64/repo.db` — HTTP 200
+- [ ] Пакет появился в выводе `gh run view --log --job=<deploy-job-id>` в списке `./aarch64/`
 
 ## Пример
 

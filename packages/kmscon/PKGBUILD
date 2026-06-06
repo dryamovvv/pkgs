@@ -31,9 +31,9 @@ conflicts=('kmscon')
 source=(
   "kmscon-$pkgver.tar.gz::https://github.com/kmscon/kmscon/archive/refs/tags/v$pkgver.tar.gz"
   "kmscon.conf"
-  "kmscon_toggle.sh"
 )
-sha256sums=('SKIP' 'SKIP' 'SKIP')
+sha256sums=('7074956472c42d14977922f9ef6d2ec101f8d88e549f0108c1f51cb9d2b437dd'
+            'SKIP')
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
@@ -62,5 +62,4 @@ package() {
   DESTDIR="$pkgdir" ninja -C build install
 
   install -Dm644 "$srcdir/kmscon.conf" "$pkgdir/etc/kmscon/kmscon.conf"
-  install -Dm755 "$srcdir/kmscon_toggle.sh" "$pkgdir/usr/bin/kmscon-toggle"
 }

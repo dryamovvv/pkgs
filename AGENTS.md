@@ -41,14 +41,16 @@ CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 ## Workflow (build.yml)
 
 1. **detect** — `git diff --name-only HEAD~1 -- packages/`, формирует matrix пакетов (на ubuntu-latest)
-2. **build** — matrix job: `runs-on: ubuntu-24.04-arm` + `container: archlinux:base-devel`, сборка `makepkg -s --noconfirm` с RPi5 CFLAGS
-3. **deploy** — `repo-add`, генерация index.html, `actions/deploy-pages@v4`
+2. **build** — matrix job: `runs-on: ubuntu-24.04-arm`, Docker `lfdevs/archlinuxarm:base-devel` + `docker cp`, сборка `makepkg -s --noconfirm` с RPi5 CFLAGS
+3. **deploy** — `repo-add` внутри arch-контейнера, генерация index.html, `actions/deploy-pages@v4`
 
 Особенности:
 
 - `detect-changes.sh` обрабатывает первый коммит (HEAD~1 не существует) — собирает все пакеты
-- Если изменений нет — `detect` выдаёт `[]`, сборка скипается
-- В контейнере: `pacman-key --init && pacman-key --populate archlinux`, создаётся пользователь `builder`
+- При изменении `ci/` или `.github/workflows/` — пересборка всех пакетов
+- Если изменений в `packages/` нет — `detect` выдаёт `[]`, сборка скипается
+- В build-контейнере: `pacman-key --init && pacman-key --populate archlinuxarm`, создаётся пользователь `builder`
+- Сборка через `docker run -d ... sleep infinity` + `docker cp` внутрь/наружу — решает проблему видимости артефактов
 
 ## Конфигурация pacman на RPi5
 

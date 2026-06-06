@@ -6,6 +6,7 @@
 # Build artifacts
 pkg/
 src/
+repo/
 
 # IDE
 .vscode/

@@ -48,7 +48,7 @@ build() {
     -Dvideo_drm3d=disabled \
     -Dlibseat=disabled \
     -Ddocs=disabled \
-    -Dtests=disabled
+    -Dtests=false
   ninja -C build
 }
 

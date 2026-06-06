@@ -37,11 +37,25 @@ for attempt in $(seq 1 10); do
       sleep 3
       continue
     }
+    cd /tmp/repo
   else
-    mkdir -p /tmp/repo/aarch64
+    git clone --depth 1 "https://github.com/${GH_REPO}.git" /tmp/repo || {
+      echo "Clone failed, retrying..."
+      sleep 3
+      continue
+    }
+    cd /tmp/repo
+    git checkout --orphan gh-pages
+    git rm -rf . 2>/dev/null || true
+    mkdir -p aarch64
+    git add aarch64
+    git commit -m "init: gh-pages branch for aarch64 repository" || true
+    git push origin gh-pages || {
+      echo "Push failed (another job created gh-pages?), retrying..."
+      sleep 3
+      continue
+    }
   fi
-
-  mkdir -p /tmp/repo/aarch64
 
   # Copy new package in (idempotent: overwrites same version)
   cp "$PKGFILE" /tmp/repo/aarch64/

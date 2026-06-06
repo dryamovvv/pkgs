@@ -1,0 +1,119 @@
+# Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
+# Contributor: dryamovvv (Arch Linux package)
+# Optimized for Raspberry Pi 5 (Cortex-A76)
+pkgname=mozillavpn
+pkgver=2.36.0
+pkgrel=1
+pkgdesc="Fast, secure, and easy to use VPN from the makers of Firefox — optimized for Raspberry Pi 5 (Cortex-A76)"
+url="https://github.com/mozilla-mobile/mozilla-vpn-client"
+license=('MPL-2.0')
+arch=('aarch64')
+
+depends=(
+  'hicolor-icon-theme'
+  'libcap'
+  'libsecret'
+  'polkit'
+  'qt6-5compat'
+  'qt6-base'
+  'qt6-declarative'
+  'qt6-networkauth'
+  'qt6-svg'
+  'qt6-websockets'
+  'wireguard-tools'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'cmake'
+  'git'
+  'go'
+  'ninja'
+  'python-lxml'
+  'python-pip'
+  'python-yaml'
+  'qt6-tools'
+)
+optdepends=(
+  'qt6-wayland: for Wayland support'
+)
+
+options=('!lto')
+
+install=mozillavpn.install
+source=(
+  "mozillavpn.install"
+  "0002-go-nil-check-cgroups.patch"
+)
+sha256sums=('20df9372161987bd0fa2b916ec408d651ceecaacac545fc43106d962df63912e'
+            '3ce8e2507843714f4ef5deb66a4abcdb61948e172e26a24139ab94590cfae4ab')
+
+prepare() {
+  cd "$srcdir"
+  git clone --depth=1 --branch "v$pkgver" "https://github.com/mozilla-mobile/mozilla-vpn-client.git" "$pkgname-$pkgver"
+  cd "$pkgname-$pkgver"
+  git -c protocol.file.allow=always submodule update --init --depth=1 -j4 2>&1 || \
+    git -c protocol.file.allow=always submodule update --init -j4 || true
+  rm -rf 3rdparty/wireguard-apple 3rdparty/wireguard-go
+  sed -i '/wireguard-apple/d;/wireguard-go/d' .gitmodules 2>/dev/null || true
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+  cd "$srcdir/$pkgname-$pkgver"
+  patch -p1 < "$srcdir/0002-go-nil-check-cgroups.patch"
+  pip install --break-system-packages glean_parser
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+  export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe -Wno-error=unused-result"
+  cmake -B build -S . -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=OFF \
+    -DBUILD_TESTS=OFF \
+    -DBUILD_CRASHREPORTING=OFF \
+    -Wno-dev
+  cmake --build build
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver"
+  cmake --build build --target build_tests 2>/dev/null || true
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+  DESTDIR="$pkgdir" cmake --install build
+
+  install -Dm644 /dev/stdin "$pkgdir/usr/share/polkit-1/rules.d/org.mozilla.vpn.rules" <<-RULES
+	polkit.addRule(function(action, subject) {
+	    if ((action.id == "org.mozilla.vpn.activate" ||
+	         action.id == "org.mozilla.vpn.deactivate") &&
+	        subject.local == true) {
+	            return polkit.Result.YES;
+	    }
+	    return polkit.Result.NOT_HANDLED;
+	});
+	RULES
+
+  install -Dm644 /dev/stdin "$pkgdir/usr/lib/systemd/system/mozillavpn.service" <<-UNIT
+	[Unit]
+	Description=MozillaVPN D-Bus service
+	Wants=modprobe@xt_cgroup.service
+	After=modprobe@xt_cgroup.service
+
+	[Service]
+	Type=dbus
+	BusName=org.mozilla.vpn.dbus
+	Restart=on-failure
+	StopWhenUnneeded=no
+	ExecStart=/usr/bin/mozillavpn linuxdaemon
+	CapabilityBoundingSet=CAP_NET_ADMIN CAP_SETUID
+	AmbientCapabilities=CAP_NET_ADMIN
+	NoNewPrivileges=yes
+	User=root
+
+	[Install]
+	WantedBy=multi-user.target
+	UNIT
+}

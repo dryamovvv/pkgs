@@ -1,0 +1,19 @@
+Fix nil pointer dereference in NetfilterResetAllCgroupsV2 when
+nftables chains haven't been created yet (VPN not activated).
+
+--- a/linux/netfilter/netfilter.go
++++ b/linux/netfilter/netfilter.go
+@@ -751,8 +751,12 @@ func NetfilterResetCgroupV2(cgroup string) int32 {
+ //export NetfilterResetAllCgroupsV2
+ func NetfilterResetAllCgroupsV2() int32 {
+ 	log.Println("Clearing all cgroup traffic marks")
+-	mozvpn_ctx.conn.FlushChain(mozvpn_ctx.cgroup_mark)
+-	mozvpn_ctx.conn.FlushChain(mozvpn_ctx.cgroup_nat)
++	if mozvpn_ctx.cgroup_mark != nil {
++		mozvpn_ctx.conn.FlushChain(mozvpn_ctx.cgroup_mark)
++	}
++	if mozvpn_ctx.cgroup_nat != nil {
++		mozvpn_ctx.conn.FlushChain(mozvpn_ctx.cgroup_nat)
++	}
+ 	return mozvpn_ctx.nftCommit()
+ }

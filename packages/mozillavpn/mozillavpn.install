@@ -1,0 +1,11 @@
+post_install() {
+  setcap cap_net_admin+ep /usr/bin/mozillavpn 2>/dev/null || true
+}
+
+post_upgrade() {
+  setcap cap_net_admin+ep /usr/bin/mozillavpn 2>/dev/null || true
+}
+
+post_remove() {
+  true
+}

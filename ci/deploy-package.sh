@@ -83,7 +83,10 @@ for attempt in $(seq 1 10); do
     echo '<h1>Arch Linux aarch64 Package Repository</h1>'
     echo '<p>Optimized for Raspberry Pi 5 (Cortex-A76)</p><hr><pre>'
     for f in aarch64/*.pkg.tar.*; do
-      [ -f "$f" ] && echo "<a href=\"$f\">$(basename $f)</a>"
+      [ -f "$f" ] || continue
+      name=$(basename "$f")
+      name_esc=$(printf '%s\n' "$name" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+      echo "<a href=\"$f\">${name_esc}</a>"
     done
     echo '</pre></body></html>'
   } >index.html

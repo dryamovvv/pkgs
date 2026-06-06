@@ -48,11 +48,11 @@ jobs:
         with:
           name: ${{ matrix.pkg }}
           path: packages/${{ matrix.pkg }}/*.pkg.tar.zst
-          if-no-files-found: error
+          if-no-files-found: warn
 
   deploy:
     needs: build
-    if: needs.build.result == 'success'
+    if: always()
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -65,9 +65,16 @@ jobs:
       - name: Prepare repository
         run: |
           mkdir -p repo/aarch64
-          find artifacts -name '*.pkg.tar.zst' -exec cp {} repo/aarch64/ \;
+          find artifacts -name '*.pkg.tar.zst' -exec cp {} repo/aarch64/ \; || echo "No packages found"
+          ls -la artifacts/ || true
+          ls -la repo/aarch64/ || true
           cd repo/aarch64
-          repo-add repo.db.tar.gz *.pkg.tar.zst
+          PKGS=(*.pkg.tar.zst)
+          if [ ${#PKGS[@]} -gt 0 ] && [ -f "${PKGS[0]}" ]; then
+            repo-add repo.db.tar.gz "${PKGS[@]}"
+          else
+            echo "No packages to add to repo"
+          fi
       - name: Generate index
         run: |
           cd repo

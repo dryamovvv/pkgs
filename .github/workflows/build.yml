@@ -49,13 +49,15 @@ jobs:
           path: /tmp/docker-image.tar
           key: docker-archlinuxarm-v2-${{ hashFiles('.github/workflows/build.yml') }}
 
-      - name: Load / pull Docker image
+      - name: Pull Docker image
+        if: steps.docker-cache.outputs.cache-hit != 'true'
         run: |
-          if [ -f /tmp/docker-image.tar ]; then
-            docker load -i /tmp/docker-image.tar
-          fi
           docker pull lfdevs/archlinuxarm:base-devel
           docker save lfdevs/archlinuxarm:base-devel -o /tmp/docker-image.tar
+
+      - name: Load cached Docker image
+        if: steps.docker-cache.outputs.cache-hit == 'true'
+        run: docker load -i /tmp/docker-image.tar
 
       # ── Pacman package cache ──
       - name: Cache pacman packages
@@ -70,11 +72,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/ccache
-          key: ccache-v2-${{ matrix.pkg }}-${{ github.run_id }}
+          key: ccache-v2-${{ matrix.pkg }}-${{ hashFiles(format('packages/{0}/PKGBUILD', matrix.pkg)) }}
           restore-keys: ccache-v2-${{ matrix.pkg }}-
 
       # ── Build ──
       - name: Build in container
+        timeout-minutes: 90
         run: |
           mkdir -p /tmp/pacman-cache /tmp/ccache
           docker rm -f builder 2>/dev/null || true

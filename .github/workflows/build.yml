@@ -30,8 +30,8 @@ jobs:
     needs: detect
     runs-on: ubuntu-24.04-arm
     container:
-      image: archlinux:base-devel
-      options: --user root
+      image: lfdevs/archlinuxarm:base-devel
+      options: --privileged
     strategy:
       matrix:
         pkg: ${{ fromJson(needs.detect.outputs.matrix) }}

@@ -13,7 +13,7 @@ echo "=== Building package: $PKG ==="
 
 # Initialize pacman keyring
 pacman-key --init
-pacman-key --populate archlinux
+pacman-key --populate archlinuxarm
 
 # Ensure sudo is available
 pacman -Syu --noconfirm --needed sudo

@@ -29,6 +29,10 @@ for attempt in $(seq 1 10); do
   echo "=== Deploy attempt $attempt/10 ==="
 
   cd /workspace
+
+  # Git identity
+  git config --global user.email "github-actions[bot]@users.noreply.github.com"
+  git config --global user.name "github-actions[bot]"
   rm -rf /tmp/repo
 
   # Clone existing gh-pages or create fresh

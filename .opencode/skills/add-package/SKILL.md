@@ -5,38 +5,39 @@ description: Use when adding a new package to the Arch Linux aarch64 repository.
 
 # Add Package to Arch Linux aarch64 Repository
 
-Интерактивный workflow добавления нового пакета в монорепозиторий `github:dryamovvv/pkgs`.
+Interactive workflow for adding a new package to the `github:dryamovvv/pkgs` monorepo.
+Target: Raspberry Pi 5 (Cortex-A76, ARMv8.2-A, aarch64).
 
-## Шаги
+## Steps
 
-### 1. Изучить пакет
+### 1. Research the package
 
-Найти upstream пакет — GitHub, GitLab, официальный сайт. Определить:
+Find upstream — GitHub, GitLab, official site. Determine:
 
-- Последнюю стабильную версию (тег/релиз)
-- Систему сборки (meson, cmake, autotools, Makefile)
-- Доступные опции сборки (`meson_options.txt`, `CMakeLists.txt`, `configure --help`, README)
-- Зависимости (build-time и runtime)
+- Latest stable version (tag/release)
+- Build system (meson, cmake, autotools, cargo, Makefile)
+- Available build options (`meson_options.txt`, `CMakeLists.txt`, `configure --help`, README)
+- Dependencies (build-time and runtime)
+- Whether the release tarball includes submodules — if not, use git-based source
 
-### 2. Перечислить опции пользователю
+### 2. Present options to the user
 
-Для КАЖДОЙ опциональной фичи пакета:
+For EACH optional feature of the package:
 
-- Объяснить, что фича даёт (одно предложение)
-- Перечислить дополнительные зависимости, которые она тянет
-- Спросить: включить или нет
+- Explain what the feature does (one sentence)
+- List additional dependencies it pulls in
+- Ask: enable or disable
 
-Использовать `question` tool для интерактивного выбора. Не принимать решения за пользователя.
+Use the `question` tool for interactive selection. Never decide for the user.
 
-**Важно:**
+**Hard rules (do not ask):**
 
-- Документация (man pages, HTML docs) — **всегда `enabled`**, не спрашивать. Если нужны доп. makedepends (`libxslt`, `docbook-xsl`, `doxygen` и т.д.) — добавить в `makedepends=()`.
-- Тесты — **всегда `disabled`** (экономия времени сборки в CI), не спрашивать.
-- Экзотические/платформозависимые фичи (например, video_drm3d для kmscon) — отключать с объяснением, не спрашивать.
+- **Documentation** (man pages, HTML docs) — **always `enabled`**. Add required makedepends (`libxslt`, `docbook-xsl`, `doxygen`, etc.).
+- **Tests** — **always `disabled`** (CI time saving).
+- **Debug symbols** — **always stripped** (`options=('!debug')` in PKGBUILD). Saves ~30-50% package size.
+- **Platform-specific/exotic features** (e.g., `video_drm3d` for kmscon) — disable with explanation, do not ask.
 
-### 3. Создать PKGBUILD
-
-Формат:
+### 3. Create PKGBUILD
 
 ```bash
 # Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
@@ -48,24 +49,47 @@ pkgrel=1
 pkgdesc="<one-liner> optimized for Raspberry Pi 5 (Cortex-A76)"
 arch=('aarch64')
 url="<upstream>"
-license=('<license>')
+license=('<spdx-id>')
+options=('!debug')
 depends=(
-  '<dep1>'
+  '<runtime-dep1>'
   ...
 )
 makedepends=(
   '<build-dep1>'
   ...
 )
+optdepends=(
+  '<opt-feature>: <brief description>'
+)
 provides=("<name>")
 conflicts=("<name>")
-source=("<url>::<tarball>" ...)
-sha256sums=('<sha256>' ...)
+backup=(
+  'etc/<pkg>/<config-file>'
+)
+source=(
+  "<tarball-url>"
+  "<local-file>"
+  ...
+)
+sha256sums=(
+  '<sha256>'
+  'SKIP'
+  ...
+)
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+  # Apply patches
+  patch -Np1 -i "$srcdir/<patch-file>"
+  # Extra setup (e.g., pip install, cargo fetch, git submodule init)
+}
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
-  CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe" \
-  CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe" \
+  export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export LDFLAGS="-Wl,-z,max-page-size=0x10000"
   <build-commands>
 }
 
@@ -77,19 +101,64 @@ check() {
 package() {
   cd "$srcdir/$pkgname-$pkgver"
   DESTDIR="$pkgdir" <install-command>
+
+  # Install local config files
+  install -Dm644 "$srcdir/<config>" "$pkgdir/etc/<pkg>/<config>"
+
+  # Install systemd services, polkit rules, etc.
+  install -Dm644 "$srcdir/<service>" "$pkgdir/usr/lib/systemd/system/<service>"
 }
 ```
 
-Правила:
+**PKGBUILD rules:**
 
-- `sha256sums`: скачать source, вычислить `sha256sum`, вставить реальные хеши. Для локальных файлов (конфиги) — `'SKIP'`.
-- `check()` всегда с `|| true` — тесты не должны блокировать сборку.
-- `depends` — runtime-зависимости, `makedepends` — только для сборки.
-- `buildtype=release` для meson, `--with-release` или аналоги для других.
+- `sha256sums`: download source, compute `sha256sum`, insert real hashes. Local files → `'SKIP'`.
+- `check()` always with `|| true` — tests must not block the build.
+- `depends` — runtime deps. `makedepends` — build-only deps.
+- `backup=()` — list config files under `/etc/` that should not be overwritten on upgrade.
+- `options=('!debug')` — strip debug symbols (saves space; add `'debug'` if the user explicitly wants them).
+- `buildtype=release` for meson. `-DCMAKE_BUILD_TYPE=Release` for cmake.
 
-### RPi5 Cortex-A76 оптимизация для всех компиляторов
+### Git-based sources (when tarball lacks submodules)
 
-**Обязательно** для любого кода на любом языке (C, C++, Rust через `RUSTFLAGS`, Go через `GOFLAGS`, ассемблер и т.д.):
+Some projects (e.g., MozillaVPN) require git submodules not included in release tarballs.
+Use `git+https://` source and clone in `prepare()`:
+
+```bash
+source=("git+https://github.com/<org>/<repo>#tag=v$pkgver")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "$srcdir"
+  cp -r "$pkgname" "$pkgname-$pkgver"
+  cd "$pkgname-$pkgver"
+  git submodule update --init --recursive
+  # ... extra setup
+}
+```
+
+### `.install` file (post-install hooks)
+
+Create `packages/<pkg>/<pkg>.install` when the package needs post-install actions:
+
+```bash
+post_install() {
+  setcap cap_net_admin+eip usr/bin/<binary>
+  systemd-sysusers
+}
+
+post_upgrade() {
+  post_install
+}
+
+pre_remove() {
+  # cleanup before removal
+}
+```
+
+### RPi5 Cortex-A76 optimization (all compilers)
+
+**Mandatory** for ALL code in ALL languages:
 
 ```
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
@@ -97,47 +166,61 @@ CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x10000"
 ```
 
-| Флаг                           | Значение                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `-mcpu=cortex-a76+crypto`      | ARMv8.2-A + AES/SHA/PMULL; включает crc, lse, rdma, fp16, dotprod, rcpc                                       |
-| `-O2`                          | Стандартная оптимизация (включает `-fomit-frame-pointer` на AArch64)                                          |
-| `-pipe`                        | Передача через пайпы вместо временных файлов                                                                  |
-| `-Wl,-z,max-page-size=0x10000` | Выравнивание ELF-сегментов на 64K — гарантирует совместимость со всеми размерами страниц ARM64 (4K, 16K, 64K) |
+| Flag                           | Meaning                                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `-mcpu=cortex-a76+crypto`      | ARMv8.2-A + AES/SHA/PMULL; enables crc, lse, rdma, fp16, dotprod, rcpc        |
+| `-O2`                          | Standard optimization (includes `-fomit-frame-pointer` on AArch64)            |
+| `-pipe`                        | Use pipes instead of temp files                                               |
+| `-Wl,-z,max-page-size=0x10000` | 64K ELF segment alignment — compatible with 4K, 16K, and 64K ARM64 page sizes |
 
 - **Rust:** `RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"`
-- **Go:** `GOFLAGS="-ldflags=-extldflags=-Wl,-z,max-page-size=0x10000"` + `GOARCH=arm64 GOARM64=v8.2`
-- `-mtune` не нужен (GCC выводит из `-mcpu`)
+- **Go:** `GOFLAGS="-ldflags=-extldflags=-Wl,-z,max-page-size=0x10000" GOARCH=arm64 GOARM64=v8.2`
+- `-mtune` is redundant (GCC derives it from `-mcpu`)
 
-### 4. Создать директорию и закоммитить
+### Common pitfalls
+
+| Pitfall                                            | Fix                                                                                                                           |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Meson boolean option given feature value           | Use `-Doption=true` / `-Doption=false`, not `enabled`/`disabled` (check if type is `boolean` or `feature` in `meson.options`) |
+| Meson feature option given boolean                 | Use `-Doption=enabled` / `-Doption=disabled` / `-Doption=auto`                                                                |
+| CMake `-DBUILD_SHARED_LIBS=ON` type mismatch       | Check CMakeLists.txt for `option()` vs `set()` — `option()` expects `ON`/`OFF`, `set()` may expect other types                |
+| Unknown meson option                               | Meson errors on unknown options since 0.60.0 — verify option exists in `meson_options.txt` or `meson.options`                 |
+| Missing `cd "$srcdir/$pkgname-$pkgver"` in build() | Some source archives extract to different names — verify with `ls "$srcdir"`                                                  |
+| Package built as `.xz` but expected `.zst`         | CI glob uses `*.pkg.tar.*` to match both                                                                                      |
+| Git source: `$pkgname` dir name mismatch           | Git clones into `$pkgname` (bare name), not `$pkgname-$pkgver` — use `cp -r` in `prepare()`                                   |
+
+### 4. Create directory and commit
 
 ```bash
 mkdir packages/<pkg-name>
-# создать packages/<pkg-name>/PKGBUILD
-# добавить локальные файлы если нужны (конфиги, патчи)
+# create packages/<pkg-name>/PKGBUILD
+# add local files if needed (configs, patches, .install)
 git add packages/<pkg-name>
 git commit -m "feat: add <pkg-name> <version>"
 git push
 ```
 
-### 5. Проверить CI до полного успеха
+### 5. Monitor CI until full success
 
-**Не останавливаться, пока пакет не собран и не задеплоен.** После `git push`:
+**Do not stop until the package is built and deployed.** After `git push`:
 
-1. Запустить наблюдение: `gh run watch` (следит в реальном времени)
-2. Если сборка упала — прочитать логи: `gh run view <run-id> --log --job=<job-id>`
-3. Исправить ошибку в PKGBUILD/патчах, закоммитить `fix: ...`, запушить
-4. Повторить с шага 1
-5. Остановиться только когда все три job-а (`detect`, `build`, `deploy`) — **success**
+1. Watch progress: `gh run watch`
+2. If build fails — read logs: `gh run view <run-id> --log --job=<job-id>`
+3. Fix the error in PKGBUILD/patches, commit `fix: ...`, push
+4. Go back to step 1
+5. Stop only when all three jobs (`detect`, `build`, `deploy`) are **success**
 
-**Чек-лист успешной сборки:**
+**Success checklist:**
 
 - [ ] `detect` — success
 - [ ] `build (<pkg-name>)` — success
 - [ ] `deploy` — success
 - [ ] `https://dryamovvv.github.io/pkgs/aarch64/repo.db` — HTTP 200
-- [ ] Пакет появился в выводе `gh run view --log --job=<deploy-job-id>` в списке `./aarch64/`
+- [ ] Package appears in deploy log under `./aarch64/`
+- [ ] `https://dryamovvv.github.io/pkgs/aarch64/<pkg>-<ver>-aarch64.pkg.tar.*` — HTTP 200
 
-## Пример
+## Example
 
-Пользователь: "добавь yazi"
-Ответ: изучить yazi → найти опции сборки → спросить про каждую → создать PKGBUILD → закоммитить → проверить CI.
+User: "add yazi"
+
+Response: research yazi → find its build options → ask user about each → create PKGBUILD → commit → push → monitor CI until deployed.

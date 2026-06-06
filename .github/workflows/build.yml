@@ -68,32 +68,36 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Prepare repository
+      - name: Prepare repository and generate index
         run: |
-          mkdir -p repo/aarch64
-          find artifacts -name '*.pkg.tar.*' -exec cp {} repo/aarch64/ \;
-          cd repo/aarch64
-          PKGS=(*.pkg.tar.*)
-          if [ ${#PKGS[@]} -gt 0 ] && [ -f "${PKGS[0]}" ]; then
-            repo-add repo.db.tar.gz "${PKGS[@]}"
-          else
-            echo "No packages to add to repo"
-          fi
-      - name: Generate index
-        run: |
-          cd repo
-          {
-            echo '<!DOCTYPE html>'
-            echo '<html lang="en">'
-            echo '<head><meta charset="UTF-8"><title>aarch64 Repository</title></head>'
-            echo '<body>'
-            echo '<h1>Arch Linux aarch64 Package Repository</h1>'
-            echo '<p>Optimized for Raspberry Pi 5 (Cortex-A76)</p><hr><pre>'
-            for f in aarch64/*.pkg.tar.*; do
-              [ -f "$f" ] && echo "<a href=\"$f\">$(basename $f)</a>"
-            done
-            echo '</pre></body></html>'
-          } > index.html
+          docker rm -f repo-builder 2>/dev/null || true
+          docker run -d --name repo-builder --privileged \
+            lfdevs/archlinuxarm:base-devel sleep infinity
+          docker cp artifacts repo-builder:/artifacts
+          docker exec repo-builder bash -c '
+            mkdir -p /repo/aarch64
+            find /artifacts -name "*.pkg.tar.*" -exec cp {} /repo/aarch64/ \;
+            cd /repo/aarch64
+            PKGS=(*.pkg.tar.*)
+            if [ ${#PKGS[@]} -gt 0 ] && [ -f "${PKGS[0]}" ]; then
+              repo-add repo.db.tar.gz "${PKGS[@]}"
+            fi
+            cd /repo
+            {
+              echo "<!DOCTYPE html>"
+              echo "<html lang=\"en\">"
+              echo "<head><meta charset=\"UTF-8\"><title>aarch64 Repository</title></head>"
+              echo "<body>"
+              echo "<h1>Arch Linux aarch64 Package Repository</h1>"
+              echo "<p>Optimized for Raspberry Pi 5 (Cortex-A76)</p><hr><pre>"
+              for f in aarch64/*.pkg.tar.*; do
+                [ -f "$f" ] && echo "<a href=\"$f\">$(basename $f)</a>"
+              done
+              echo "</pre></body></html>"
+            } > index.html
+          '
+          docker cp repo-builder:/repo ./repo
+          docker rm -f repo-builder
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

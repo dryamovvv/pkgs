@@ -13,8 +13,8 @@ fi
 
 cd /workspace
 
-# Find package file
-PKGFILE=$(ls "$PKGDIR"/*.pkg.tar.* 2>/dev/null | head -1)
+# Find package file (store absolute path — CWD changes to /tmp/repo later)
+PKGFILE=$(realpath "$(ls "$PKGDIR"/*.pkg.tar.* 2>/dev/null | head -1)" 2>/dev/null || echo "/workspace/$(ls "$PKGDIR"/*.pkg.tar.* 2>/dev/null | head -1)")
 if [ -z "$PKGFILE" ]; then
   echo "ERROR: No package file found in $PKGDIR"
   exit 1

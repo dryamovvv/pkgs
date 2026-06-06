@@ -89,7 +89,7 @@ build() {
   cd "$srcdir/$pkgname-$pkgver"
   export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
   export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
-  export LDFLAGS="-Wl,-z,max-page-size=0x10000"
+  export LDFLAGS="-Wl,-z,max-page-size=0x4000"
   <build-commands>
 }
 
@@ -160,21 +160,22 @@ pre_remove() {
 
 **Mandatory** for ALL code in ALL languages:
 
-```
+````
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
-LDFLAGS="-Wl,-z,max-page-size=0x10000"
-```
+LDFLAGS="-Wl,-z,max-page-size=0x4000"
 
-| Flag                           | Meaning                                                                       |
-| ------------------------------ | ----------------------------------------------------------------------------- |
-| `-mcpu=cortex-a76+crypto`      | ARMv8.2-A + AES/SHA/PMULL; enables crc, lse, rdma, fp16, dotprod, rcpc        |
-| `-O2`                          | Standard optimization (includes `-fomit-frame-pointer` on AArch64)            |
-| `-pipe`                        | Use pipes instead of temp files                                               |
-| `-Wl,-z,max-page-size=0x10000` | 64K ELF segment alignment — compatible with 4K, 16K, and 64K ARM64 page sizes |
+``
+
+| Флаг                           | Значение                                                                                             |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `-mcpu=cortex-a76+crypto`      | ARMv8.2-A + AES/SHA/PMULL; includes crc, lse, rdma, fp16, dotprod, rcpc                              |
+| `-O2`                          | Standard optimization (enables `-fomit-frame-pointer` on AArch64)                                    |
+| `-pipe`                        | Pipes instead of temporary files                                                                    |
+| `-Wl,-z,max-page-size=0x4000`  | 16K ELF segment alignment — ARM64 page size on RPi5                                                  |
 
 - **Rust:** `RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"`
-- **Go:** `GOFLAGS="-ldflags=-extldflags=-Wl,-z,max-page-size=0x10000" GOARCH=arm64 GOARM64=v8.2`
+- **Go:** `GOFLAGS="-ldflags=-extldflags=-Wl,-z,max-page-size=0x4000" GOARCH=arm64 GOARM64=v8.2`
 - `-mtune` is redundant (GCC derives it from `-mcpu`)
 
 ### Common pitfalls
@@ -198,7 +199,7 @@ mkdir packages/<pkg-name>
 git add packages/<pkg-name>
 git commit -m "feat: add <pkg-name> <version>"
 git push
-```
+````
 
 ### 5. Monitor CI until full success
 

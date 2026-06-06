@@ -3,7 +3,7 @@
 # Optimized for Raspberry Pi 5 (Cortex-A76)
 pkgname=mozillavpn
 pkgver=2.36.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Fast, secure, and easy to use VPN from the makers of Firefox — optimized for Raspberry Pi 5 (Cortex-A76)"
 url="https://github.com/mozilla-mobile/mozilla-vpn-client"
 license=('MPL-2.0')
@@ -38,7 +38,7 @@ optdepends=(
   'qt6-wayland: for Wayland support'
 )
 
-options=('!lto')
+options=('!debug' '!lto')
 
 install=mozillavpn.install
 source=(
@@ -66,6 +66,7 @@ build() {
   cd "$srcdir/$pkgname-$pkgver"
   export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
   export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe -Wno-error=unused-result"
+  export LDFLAGS="-Wl,-z,max-page-size=0x10000"
   cmake -B build -S . -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \

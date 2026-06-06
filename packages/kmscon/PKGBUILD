@@ -3,7 +3,7 @@
 # Optimized for Raspberry Pi 5 (Cortex-A76)
 pkgname=kmscon
 pkgver=10.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc="KMS/DRM terminal emulator optimized for Raspberry Pi 5 (Cortex-A76)"
 arch=('aarch64')
 url="https://github.com/kmscon/kmscon"
@@ -28,8 +28,10 @@ makedepends=(
   'libxslt'
   'docbook-xsl'
 )
+options=('!debug')
 provides=('kmscon')
 conflicts=('kmscon')
+backup=('etc/kmscon/kmscon.conf')
 source=(
   "kmscon-$pkgver.tar.gz::https://github.com/kmscon/kmscon/archive/refs/tags/v$pkgver.tar.gz"
   "kmscon.conf"
@@ -39,8 +41,9 @@ sha256sums=('7074956472c42d14977922f9ef6d2ec101f8d88e549f0108c1f51cb9d2b437dd'
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
-  CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe" \
-  CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe" \
+  export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export LDFLAGS="-Wl,-z,max-page-size=0x10000"
   meson setup build \
     --prefix=/usr \
     --sysconfdir=/etc \

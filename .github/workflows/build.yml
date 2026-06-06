@@ -33,22 +33,28 @@ jobs:
   build:
     needs: detect
     runs-on: ubuntu-24.04-arm
-    container:
-      image: lfdevs/archlinuxarm:base-devel
-      options: --privileged
+    env:
+      PKG: ${{ matrix.pkg }}
     strategy:
       matrix:
         pkg: ${{ fromJson(needs.detect.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build ${{ matrix.pkg }}
-        run: ci/build-package.sh ${{ matrix.pkg }}
+      - name: Build in container
+        run: |
+          docker run --privileged \
+            -v ${{ github.workspace }}:${{ github.workspace }} \
+            -w ${{ github.workspace }} \
+            lfdevs/archlinuxarm:base-devel \
+            bash -c "ci/build-package.sh ${PKG}"
+      - name: List packages
+        run: find packages -name '*.pkg.tar.zst' -type f
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.pkg }}
           path: packages/${{ matrix.pkg }}/*.pkg.tar.zst
-          if-no-files-found: warn
+          if-no-files-found: error
 
   deploy:
     needs: build
@@ -65,9 +71,7 @@ jobs:
       - name: Prepare repository
         run: |
           mkdir -p repo/aarch64
-          find artifacts -name '*.pkg.tar.zst' -exec cp {} repo/aarch64/ \; || echo "No packages found"
-          ls -la artifacts/ || true
-          ls -la repo/aarch64/ || true
+          find artifacts -name '*.pkg.tar.zst' -exec cp {} repo/aarch64/ \;
           cd repo/aarch64
           PKGS=(*.pkg.tar.zst)
           if [ ${#PKGS[@]} -gt 0 ] && [ -f "${PKGS[0]}" ]; then

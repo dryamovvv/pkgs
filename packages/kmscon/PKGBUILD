@@ -47,7 +47,6 @@ build() {
     -Dfont_freetype=enabled \
     -Dvideo_drm3d=disabled \
     -Dlibseat=disabled \
-    -Ddbus=disabled \
     -Ddocs=disabled \
     -Dtests=disabled
   ninja -C build

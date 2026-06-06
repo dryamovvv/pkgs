@@ -1,0 +1,88 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+    paths: ["packages/**"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: set-matrix
+        run: echo "matrix=$(ci/detect-changes.sh)" >> $GITHUB_OUTPUT
+
+  build:
+    needs: detect
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: archlinux:base-devel
+      options: --user root
+    strategy:
+      matrix:
+        pkg: ${{ fromJson(needs.detect.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.pkg }}
+        run: ci/build-package.sh ${{ matrix.pkg }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.pkg }}
+          path: packages/${{ matrix.pkg }}/*.pkg.tar.zst
+          if-no-files-found: error
+
+  deploy:
+    needs: build
+    if: needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Prepare repository
+        run: |
+          mkdir -p repo/aarch64
+          find artifacts -name '*.pkg.tar.zst' -exec cp {} repo/aarch64/ \;
+          cd repo/aarch64
+          repo-add repo.db.tar.gz *.pkg.tar.zst
+      - name: Generate index
+        run: |
+          cd repo
+          {
+            echo '<!DOCTYPE html>'
+            echo '<html lang="en">'
+            echo '<head><meta charset="UTF-8"><title>aarch64 Repository</title></head>'
+            echo '<body>'
+            echo '<h1>Arch Linux aarch64 Package Repository</h1>'
+            echo '<p>Optimized for Raspberry Pi 5 (Cortex-A76)</p><hr><pre>'
+            for f in aarch64/*.pkg.tar.zst; do
+              [ -f "$f" ] && echo "<a href=\"$f\">$(basename $f)</a>"
+            done
+            echo '</pre></body></html>'
+          } > index.html
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: repo
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

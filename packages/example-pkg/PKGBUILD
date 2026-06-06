@@ -1,0 +1,23 @@
+# Maintainer: Your Name <you@example.com>
+pkgname=example-pkg
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Example package for custom Arch Linux aarch64 repo"
+arch=('aarch64')
+url="https://github.com/dryamovvv/pkgs"
+license=('MIT')
+depends=()
+makedepends=()
+source=()
+sha256sums=()
+
+package() {
+  mkdir -p "$pkgdir/usr/bin"
+  cat > "$pkgdir/usr/bin/cortex-info" << 'EOF'
+#!/bin/bash
+echo "Running on: $(uname -m)"
+echo "CPU: $(grep 'model name' /proc/cpuinfo | head -1 || grep 'CPU part' /proc/cpuinfo | head -1)"
+echo "Optimized for Cortex-A76 (Raspberry Pi 5)"
+EOF
+  chmod +x "$pkgdir/usr/bin/cortex-info"
+}

@@ -22,8 +22,10 @@ fi
 PKGNAME=$(basename "$PKGFILE")
 echo "=== Deploying $PKGNAME ==="
 
-# Git auth for github.com
-GH_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GH_REPO}.git"
+# Configure git credential helper (avoids token in process args/urls)
+git config --global credential.helper store
+echo "https://x-access-token:${GITHUB_TOKEN}@github.com" >~/.git-credentials
+chmod 600 ~/.git-credentials
 
 for attempt in $(seq 1 10); do
   echo "=== Deploy attempt $attempt/10 ==="
@@ -36,15 +38,15 @@ for attempt in $(seq 1 10); do
   rm -rf /tmp/repo
 
   # Clone existing gh-pages or create fresh
-  if git ls-remote --heads "${GH_URL}" gh-pages 2>/dev/null | grep -q gh-pages; then
-    git clone --depth 1 -b gh-pages "${GH_URL}" /tmp/repo || {
+  if git ls-remote --heads "https://github.com/${GH_REPO}.git" gh-pages 2>/dev/null | grep -q gh-pages; then
+    git clone --depth 1 -b gh-pages "https://github.com/${GH_REPO}.git" /tmp/repo || {
       echo "Clone failed, retrying..."
       sleep 3
       continue
     }
     cd /tmp/repo
   else
-    git clone --depth 1 "${GH_URL}" /tmp/repo || {
+    git clone --depth 1 "https://github.com/${GH_REPO}.git" /tmp/repo || {
       echo "Clone failed, retrying..."
       sleep 3
       continue
@@ -87,13 +89,12 @@ for attempt in $(seq 1 10); do
   } >index.html
 
   # Commit and push
-  git config user.name "github-actions[bot]"
-  git config user.email "github-actions[bot]@users.noreply.github.com"
   git add -A
   git diff --cached --quiet || git commit -m "deploy: $PKGNAME"
 
   if git push origin gh-pages 2>&1; then
     echo "=== Deploy successful ==="
+    rm -f ~/.git-credentials
     exit 0
   fi
 

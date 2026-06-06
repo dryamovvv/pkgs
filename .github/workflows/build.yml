@@ -89,7 +89,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          docker exec -e GITHUB_TOKEN builder bash -c "cd /workspace && ci/deploy-package.sh packages-built/${{ matrix.pkg }}"
+          docker exec -e GITHUB_TOKEN builder bash -c "cd /workspace && ci/deploy-package.sh packages/${{ matrix.pkg }}"
 
       # ── Artifact backup ──
       - name: Upload artifact

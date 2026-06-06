@@ -25,6 +25,8 @@ makedepends=(
   'meson'
   'ninja'
   'python'
+  'libxslt'
+  'docbook-xsl'
 )
 provides=('kmscon')
 conflicts=('kmscon')
@@ -47,7 +49,7 @@ build() {
     -Dfont_freetype=enabled \
     -Dvideo_drm3d=disabled \
     -Dlibseat=disabled \
-    -Ddocs=disabled \
+    -Ddocs=enabled \
     -Dtests=false
   ninja -C build
 }

@@ -15,15 +15,22 @@ echo "=== Building package: $PKG ==="
 pacman-key --init
 pacman-key --populate archlinuxarm
 
-# Sync databases and install sudo if not present
-pacman -Sy --noconfirm --needed sudo
+# Install build essentials
+pacman -Sy --noconfirm --needed sudo ccache
 
-# Set up RPi5-optimized makepkg.conf (Cortex-A76)
+# Set up ccache
+export CCACHE_DIR=/ccache
+export CCACHE_MAXSIZE=5G
+export PATH=/usr/lib/ccache/bin:$PATH
+ccache -z >/dev/null 2>&1 || true
+
+# Set up RPi5-optimized makepkg.conf (Cortex-A76, 16K-page ELF alignment)
 cat >>/etc/makepkg.conf <<'EOF'
 
 # Cortex-A76 optimizations for Raspberry Pi 5
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="${CFLAGS}"
+LDFLAGS="-Wl,-z,max-page-size=0x4000"
 # -fomit-frame-pointer is default on AArch64 at -O2
 EOF
 
@@ -35,5 +42,8 @@ echo "builder ALL=(ALL) NOPASSWD: ALL" >>/etc/sudoers
 chown -R builder:builder "$PKGDIR"
 cd "$PKGDIR"
 su builder -c "makepkg -s --noconfirm"
+
+# Show ccache stats
+ccache -s >&2 || true
 
 echo "=== Build complete ==="

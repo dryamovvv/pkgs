@@ -10,13 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  contents: write
 
 jobs:
   detect:
@@ -32,76 +26,80 @@ jobs:
 
   build:
     needs: detect
+    if: ${{ needs.detect.outputs.matrix != '[]' && needs.detect.outputs.matrix != '' }}
     runs-on: ubuntu-24.04-arm
     strategy:
+      fail-fast: false
       matrix:
-        pkg: ${{ fromJson(needs.detect.outputs.matrix) }}
+        pkg: ${{ fromJSON(needs.detect.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
+
+      # ── Docker image cache ──
+      - name: Cache Docker image
+        id: docker-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/docker-image.tar
+          key: docker-archlinuxarm-v2-${{ hashFiles('.github/workflows/build.yml') }}
+
+      - name: Load / pull Docker image
+        run: |
+          if [ -f /tmp/docker-image.tar ]; then
+            docker load -i /tmp/docker-image.tar
+          fi
+          docker pull lfdevs/archlinuxarm:base-devel
+          docker save lfdevs/archlinuxarm:base-devel -o /tmp/docker-image.tar
+
+      # ── Pacman package cache ──
+      - name: Cache pacman packages
+        uses: actions/cache@v4
+        with:
+          path: /tmp/pacman-cache
+          key: pacman-cache-v2-${{ hashFiles('packages/*/PKGBUILD') }}
+          restore-keys: pacman-cache-v2-
+
+      # ── ccache ──
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/ccache
+          key: ccache-v2-${{ matrix.pkg }}-${{ github.run_id }}
+          restore-keys: ccache-v2-${{ matrix.pkg }}-
+
+      # ── Build ──
       - name: Build in container
         run: |
+          mkdir -p /tmp/pacman-cache /tmp/ccache
           docker rm -f builder 2>/dev/null || true
           docker run -d --name builder --privileged \
+            -v /tmp/pacman-cache:/var/cache/pacman/pkg \
+            -v /tmp/ccache:/ccache \
             lfdevs/archlinuxarm:base-devel sleep infinity
           docker cp . builder:/workspace/
           docker exec builder bash -c "cd /workspace && ci/build-package.sh ${{ matrix.pkg }}"
-          docker cp builder:/workspace/packages ./
-          docker rm -f builder
+
       - name: List packages
-        run: find packages -name '*.pkg.tar.*' -type f -ls
+        run: |
+          docker cp builder:/workspace/packages ./packages-built
+          find packages-built -name '*.pkg.tar.*' -type f -ls
+
+      # ── Deploy (inside container, retry-based) ──
+      - name: Deploy to repository
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker exec -e GITHUB_TOKEN builder bash -c "cd /workspace && ci/deploy-package.sh packages-built/${{ matrix.pkg }}"
+
+      # ── Artifact backup ──
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.pkg }}
-          path: packages/${{ matrix.pkg }}/*.pkg.tar.*
+          path: packages-built/${{ matrix.pkg }}/*.pkg.tar.*
           if-no-files-found: error
 
-  deploy:
-    needs: build
-    if: success()
-    runs-on: ubuntu-24.04-arm
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: Prepare repository and generate index
-        run: |
-          docker rm -f repo-builder 2>/dev/null || true
-          docker run -d --name repo-builder --privileged \
-            lfdevs/archlinuxarm:base-devel sleep infinity
-          docker cp artifacts repo-builder:/artifacts
-          docker exec repo-builder bash -c '
-            mkdir -p /repo/aarch64
-            find /artifacts -name "*.pkg.tar.*" -exec cp {} /repo/aarch64/ \;
-            cd /repo/aarch64
-            PKGS=(*.pkg.tar.*)
-            if [ ${#PKGS[@]} -gt 0 ] && [ -f "${PKGS[0]}" ]; then
-              repo-add repo.db.tar.gz "${PKGS[@]}"
-            fi
-            cd /repo
-            {
-              echo "<!DOCTYPE html>"
-              echo "<html lang=\"en\">"
-              echo "<head><meta charset=\"UTF-8\"><title>aarch64 Repository</title></head>"
-              echo "<body>"
-              echo "<h1>Arch Linux aarch64 Package Repository</h1>"
-              echo "<p>Optimized for Raspberry Pi 5 (Cortex-A76)</p><hr><pre>"
-              for f in aarch64/*.pkg.tar.*; do
-                [ -f "$f" ] && echo "<a href=\"$f\">$(basename $f)</a>"
-              done
-              echo "</pre></body></html>"
-            } > index.html
-          '
-          docker cp repo-builder:/repo ./repo
-          docker rm -f repo-builder
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: repo
-      - name: Deploy to Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      # ── Cleanup ──
+      - name: Stop container
+        if: always()
+        run: docker rm -f builder 2>/dev/null || true

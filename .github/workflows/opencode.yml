@@ -5,6 +5,8 @@ on:
     types: [opened, edited]
   issue_comment:
     types: [created]
+  pull_request:
+    types: [opened, synchronize]
   pull_request_review_comment:
     types: [created]
   workflow_dispatch:
@@ -26,7 +28,7 @@ jobs:
   opencode-analysis:
     if: |
       github.event_name != 'workflow_dispatch' &&
-      !contains(github.event.issue.labels.*.name, 'ci-failure')
+      !contains(github.event.issue.labels.*.name || github.event.pull_request.labels.*.name || '', 'ci-failure')
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -44,7 +46,23 @@ jobs:
           git config user.name "opencode[bot]"
           git config user.email "opencode[bot]@users.noreply.github.com"
 
-      - name: Run opencode
+      - name: Resolve run mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.event_name }}" = "pull_request_review_comment" ]; then
+            echo "mode=review" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "issue_comment" ]; then
+            echo "mode=comment" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "issues" ]; then
+            echo "mode=issue" >> $GITHUB_OUTPUT
+          else
+            echo "mode=unknown" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run opencode (new-package)
+        if: |
+          github.event_name == 'issues' &&
+          contains(github.event.issue.labels.*.name, 'new-package')
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -55,7 +73,118 @@ jobs:
           model: opencode/deepseek-v4-flash-free
           share: true
           use_github_token: false
-          prompt: ${{ github.event.issue.body || github.event.comment.body }}
+          prompt: |
+            A new package addition request was opened:
+
+            **Issue:** ${{ github.event.issue.title }}
+            **Body:**
+            ${{ github.event.issue.body }}
+
+            ## Your task
+
+            Load the skill `.opencode/skills/add-package/SKILL.md` and follow it EXACTLY:
+
+            1. **Extract package name** from the issue title/body.
+            2. **Research** the package — find upstream, latest version, build system, all optional features.
+               Use Context7 and web search. 
+            3. **Enable ALL features** by default. Hard rules: docs=always, tests=disabled, debug=stripped.
+            4. **Do NOT ask interactive questions.** Enable everything. Comment on the issue listing what you enabled and why. 
+               Mention that user can reply "disable X" to change.
+            5. **Create branch:** `add-package/{pkg-name}`
+            6. **Create** `packages/{pkg-name}/PKGBUILD` with all RPi5 Cortex-A76 flags.
+            7. **Create** `packages/{pkg-name}/AGENTS.md` and `packages/{pkg-name}/README.md`.
+            8. **Add package** to `AGENTS.md` and `README.md` package tables (alphabetical order).
+            9. **Commit** with message: `feat: add {pkg-name} {version}`
+            10. **Push** the branch.
+            11. **Open PR** against main with body listing selected features.
+            12. **Comment on issue** with PR link and summary of enabled features.
+
+            Do NOT wait for CI. The auto-merge workflow will merge after CI passes.
+
+      - name: Run opencode (new-package comment)
+        if: |
+          github.event_name == 'issue_comment' &&
+          !contains(github.event.comment.body, 'opencode[bot]')
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        with:
+          model: opencode/deepseek-v4-flash-free
+          share: true
+          use_github_token: false
+          prompt: |
+            A user commented on issue #${{ github.event.issue.number }}:
+
+            **Issue title:** ${{ github.event.issue.title }}
+            **Comment:**
+            ${{ github.event.comment.body }}
+
+            ## Your task
+
+            1. Read the FULL issue history (previous comments) to understand context.
+               Use `gh issue view ${{ github.event.issue.number }} --comments` to get all comments.
+            2. If the comment requests changes to an existing package (e.g., "disable X feature", "change version"):
+               - Find the existing branch `add-package/{pkg-name}` (or auto-fix branch)
+               - Checkout the branch, make the changes, commit, push
+               - Comment on the issue confirming what was changed
+            3. If this is part of the new-package flow and all questions are answered:
+               - Follow the add-package skill to create PKGBUILD and open a PR
+            4. Comment on the issue with your response.
+
+      - name: Run opencode (PR review)
+        if: |
+          github.event_name == 'pull_request' ||
+          github.event_name == 'pull_request_review_comment'
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        with:
+          model: opencode/deepseek-v4-flash-free
+          share: true
+          use_github_token: false
+          prompt: |
+            A PR needs code review:
+
+            **PR:** ${{ github.event.pull_request.html_url }}
+            **Title:** ${{ github.event.pull_request.title }}
+            **Branch:** ${{ github.event.pull_request.head.ref }}
+
+            ## Your task
+
+            1. Fetch the PR branch and review the diff: `gh pr diff ${{ github.event.pull_request.number }}`
+            2. Check:
+               - PKGBUILD syntax, completeness, correct RPi5 flags
+               - All features properly enabled as described in PR body
+               - sha256sums match actual sources
+               - AGENTS.md and README.md present and accurate
+               - No obvious build issues
+            3. If OK → approve the PR: `gh pr review ${{ github.event.pull_request.number }} --approve`
+               With body: "LGTM. PKGBUILD is correct, features properly configured."
+            4. If issues found → submit review with changes requested:
+               `gh pr review ${{ github.event.pull_request.number }} --request-changes`
+               List specific issues and suggested fixes.
+
+      - name: Run opencode (default)
+        if: |
+          steps.mode.outputs.mode == 'unknown' ||
+          (github.event_name == 'issues' && !contains(github.event.issue.labels.*.name, 'new-package'))
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        with:
+          model: opencode/deepseek-v4-flash-free
+          share: true
+          use_github_token: false
+          prompt: ${{ github.event.issue.body || github.event.comment.body || github.event.pull_request.body }}
 
   auto-fix-runner:
     if: github.event_name == 'workflow_dispatch'

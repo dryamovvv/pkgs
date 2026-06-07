@@ -23,7 +23,7 @@ on:
         type: string
 
 jobs:
-  opencode:
+  opencode-analysis:
     if: |
       github.event_name != 'workflow_dispatch' &&
       !contains(github.event.issue.labels.*.name, 'ci-failure')
@@ -57,7 +57,7 @@ jobs:
           use_github_token: false
           prompt: ${{ github.event.issue.body || github.event.comment.body }}
 
-  auto-fix:
+  auto-fix-runner:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -101,10 +101,61 @@ jobs:
             1. Use `gh run view` with the failed run URL to read the failure logs
             2. Identify which package(s) failed and why
             3. Fix the PKGBUILD or related files in the packages/ directory
-            4. Commit and push to main with message: fix(ci): auto-fix build failure (attempt ${{ inputs.attempt }})
-            5. Comment on issue ${{ inputs.issue-number }} with a summary of what was fixed
+            4. Commit locally (do not push) with message: fix(ci): auto-fix build failure (attempt ${{ inputs.attempt }})
+            5. Output the git changes in the workspace for subsequent steps to create a branch and PR
 
             Important: Only fix the package that failed. Do not modify other packages or CI scripts.
+
+      - name: Create auto-fix branch and PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Ensure we have full history
+          git fetch --no-tags --prune --unshallow || true
+          if [ -n "$(git status --porcelain)" ]; then
+            ISSUE=${{ inputs.issue-number }}
+            ATTEMPT=${{ inputs.attempt }}
+            BRANCH="auto-fix/issue-${ISSUE}-attempt-${ATTEMPT}-$(date +%s)"
+            git checkout -b "$BRANCH"
+            git add -A
+            git commit -m "fix(ci): auto-fix build failure (attempt ${ATTEMPT})" || true
+
+            # Run lightweight makepkg checks inside container before pushing/creating PR
+            REPO="${{ github.repository }}"
+            CHANGED_PKGS=$(git show --name-only --pretty=format: HEAD | grep -oP 'packages/\K[^/]+' | sort -u || true)
+            if [ -n "$CHANGED_PKGS" ]; then
+              for pkg in $CHANGED_PKGS; do
+                echo "== Checking package: $pkg =="
+                if [ ! -f "packages/$pkg/PKGBUILD" ]; then
+                  echo "No PKGBUILD for $pkg; skipping"
+                  continue
+                fi
+                # Syntax check
+                if ! bash -n "packages/$pkg/PKGBUILD"; then
+                  gh issue comment ${ISSUE} --repo $REPO --body "❌ Auto-fix attempt ${ATTEMPT} produced a syntax error in packages/$pkg/PKGBUILD. Aborting PR creation." || true
+                  exit 1
+                fi
+                # Basic required fields
+                if ! grep -q '^pkgname=' "packages/$pkg/PKGBUILD" || ! grep -q '^pkgver=' "packages/$pkg/PKGBUILD"; then
+                  gh issue comment ${ISSUE} --repo $REPO --body "❌ Auto-fix attempt ${ATTEMPT} produced an invalid PKGBUILD (missing pkgname/pkgver) in packages/$pkg. Aborting PR creation." || true
+                  exit 1
+                fi
+              done
+            else
+              echo "No package files detected in commit; skipping PKGBUILD checks"
+            fi
+
+            git push origin "$BRANCH"
+
+            PR_URL=$(gh pr create --title "Auto-fix: issue #${ISSUE} (attempt ${ATTEMPT})" \
+              --body "Auto-fix attempt ${ATTEMPT} for issue #${ISSUE}. See workflow run: ${{ inputs.run-url }}\n\nAuto-fix branch: ${BRANCH}\n\nNote: issue will be closed only after PR is merged and CI passes." \
+              --base main --head "$BRANCH" --repo ${{ github.repository }} --json url -q '.url') || true
+
+            gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "🔧 Auto-fix attempt ${ATTEMPT} created a PR: ${PR_URL}. It will be merged after verification; the issue will be closed only after merge and successful CI." || true
+          else
+            echo "No changes produced by auto-fix; nothing to create."
+          fi
 
       - name: Comment on issue after auto-fix
         if: always()
@@ -113,7 +164,7 @@ jobs:
         run: |
           if [ "${{ job.status }}" = "success" ]; then
             EMOJI="✅"
-            MSG="Auto-fix attempt ${{ inputs.attempt }}/3 completed. Check the next build run for results."
+            MSG="Auto-fix attempt ${{ inputs.attempt }}/3 created (or no-op). A PR was opened for review. The issue will be closed after PR merge and successful CI."
           elif [ "${{ job.status }}" = "cancelled" ]; then
             EMOJI="⛔"
             MSG="Auto-fix attempt ${{ inputs.attempt }}/3 was cancelled."
@@ -122,6 +173,3 @@ jobs:
             MSG="Auto-fix attempt ${{ inputs.attempt }}/3 failed. Manual intervention may be needed."
           fi
           gh issue comment ${{ inputs.issue-number }} --repo ${{ github.repository }} --body "${EMOJI} **${MSG}**" || true
-          if [ "${{ job.status }}" = "success" ]; then
-            gh issue close ${{ inputs.issue-number }} --repo ${{ github.repository }} --comment "Auto-fix applied and pushed. Closing — rebuild will verify." || true
-          fi

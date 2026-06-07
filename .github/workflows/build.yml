@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  detect:
+  detect-changed-packages:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -34,14 +34,14 @@ jobs:
       - id: set-matrix
         run: echo "matrix=$(ci/detect-changes.sh)" >> $GITHUB_OUTPUT
 
-  build:
-    needs: detect
-    if: ${{ needs.detect.outputs.matrix != '[]' && needs.detect.outputs.matrix != '' }}
+  build-packages-matrix:
+    needs: detect-changed-packages
+    if: ${{ needs.detect-changed-packages.outputs.matrix != '[]' && needs.detect-changed-packages.outputs.matrix != '' }}
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
-        pkg: ${{ fromJSON(needs.detect.outputs.matrix) }}
+        pkg: ${{ fromJSON(needs.detect-changed-packages.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v6
 
@@ -100,8 +100,10 @@ jobs:
             -v /tmp/ccache:/ccache \
             -v /tmp/cargo-registry:/home/builder/.cargo/registry \
             -v /tmp/cargo-git:/home/builder/.cargo/git \
+            -v $GITHUB_WORKSPACE/packages/${{ matrix.pkg }}:/workspace/packages/${{ matrix.pkg }} \
+            -v $GITHUB_WORKSPACE/ci:/workspace/ci:ro \
             lfdevs/archlinuxarm:base-devel sleep infinity
-          docker cp . builder:/workspace/
+          # Mount only the package directory and ci scripts into the container to avoid copying the whole repo
           docker exec \
             -e GPG_KEY="${{ vars.GPG_KEY_ID }}" \
             -e GPG_IMPORT="${{ secrets.GPG_PRIVATE_KEY }}" \
@@ -178,8 +180,8 @@ jobs:
         if: always()
         run: docker rm -f builder 2>/dev/null || true
 
-  report-failure:
-    needs: [detect, build]
+  create-failure-issue:
+    needs: [detect-changed-packages, build-packages-matrix]
     if: failure()
     runs-on: ubuntu-latest
     permissions:

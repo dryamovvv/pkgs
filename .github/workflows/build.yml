@@ -100,8 +100,10 @@ jobs:
             -v /tmp/ccache:/ccache \
             -v /tmp/cargo-registry:/home/builder/.cargo/registry \
             -v /tmp/cargo-git:/home/builder/.cargo/git \
+            -v $GITHUB_WORKSPACE/packages/${{ matrix.pkg }}:/workspace/packages/${{ matrix.pkg }} \
+            -v $GITHUB_WORKSPACE/ci:/workspace/ci:ro \
             lfdevs/archlinuxarm:base-devel sleep infinity
-          docker cp . builder:/workspace/
+          # Mount only the package directory and ci scripts into the container to avoid copying the whole repo
           docker exec \
             -e GPG_KEY="${{ vars.GPG_KEY_ID }}" \
             -e GPG_IMPORT="${{ secrets.GPG_PRIVATE_KEY }}" \

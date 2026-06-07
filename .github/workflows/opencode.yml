@@ -120,6 +120,24 @@ jobs:
             git checkout -b "$BRANCH"
             git add -A
             git commit -m "fix(ci): auto-fix build failure (attempt ${ATTEMPT})" || true
+
+            # Run lightweight makepkg checks inside container before pushing/creating PR
+            REPO="${{ github.repository }}"
+            CHANGED_PKGS=$(git show --name-only --pretty=format: HEAD | grep -oP 'packages/\K[^/]+' | sort -u || true)
+            if [ -n "$CHANGED_PKGS" ]; then
+              for pkg in $CHANGED_PKGS; do
+                echo "== Checking package: $pkg =="
+                docker run --rm -v "$GITHUB_WORKSPACE":/workspace -w /workspace lfdevs/archlinuxarm:base-devel bash -lc "cd packages/$pkg && makepkg -s --noconfirm --nobuild"
+                if [ $? -ne 0 ]; then
+                  echo "Makepkg check failed for $pkg; aborting PR creation"
+                  gh issue comment ${ISSUE} --repo $REPO --body "❌ Auto-fix attempt ${ATTEMPT} failed local makepkg check for package \\`$pkg\\`. Aborting PR creation. Please inspect changes." || true
+                  exit 1
+                fi
+              done
+            else
+              echo "No package files detected in commit; skipping makepkg checks"
+            fi
+
             git push origin "$BRANCH"
 
             PR_URL=$(gh pr create --title "Auto-fix: issue #${ISSUE} (attempt ${ATTEMPT})" \

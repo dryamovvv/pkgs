@@ -26,9 +26,8 @@ fi
 # ── Ensure latest release exists ──
 if ! gh release view latest --repo "$GITHUB_REPOSITORY" &>/dev/null; then
 	echo "=== Creating latest release ==="
-	git tag -f latest
-	git push origin latest --force
 	gh release create latest \
+		--target main \
 		--title "Latest packages" \
 		--notes "Arch Linux aarch64 packages optimized for Raspberry Pi 5 (Cortex-A76)" \
 		--repo "$GITHUB_REPOSITORY"

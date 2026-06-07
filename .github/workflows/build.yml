@@ -234,6 +234,8 @@ jobs:
     needs: build-packages-matrix
     runs-on: ubuntu-24.04-arm
     if: needs.build-packages-matrix.result == 'success'
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -246,6 +248,8 @@ jobs:
           path: packages-built
 
       - name: Validate GPG secrets
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           : "${GPG_PASSPHRASE:?ERROR: GPG_PASSPHRASE secret not set}"
           echo "GPG secrets are configured"

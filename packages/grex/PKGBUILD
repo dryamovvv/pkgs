@@ -20,12 +20,12 @@ source=("https://github.com/pemistahl/grex/archive/refs/tags/v1.4.6.tar.gz")
 sha256sums=('2ab9cb4c3d921711f23ea33a9e60dc11e9eaab450b16d1f2247bea2276822433')
 
 prepare() {
-  cd "$srcdir/grex-v1.4.6"
+  cd "$srcdir/grex-1.4.6"
   cargo fetch --locked
 }
 
 build() {
-  cd "$srcdir/grex-v1.4.6"
+  cd "$srcdir/grex-1.4.6"
   export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
   export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
   export LDFLAGS="-Wl,-z,max-page-size=0x4000"
@@ -34,12 +34,12 @@ build() {
 }
 
 check() {
-  cd "$srcdir/grex-v1.4.6"
+  cd "$srcdir/grex-1.4.6"
   cargo test --workspace --all-targets --all-features || true
 }
 
 package() {
-  cd "$srcdir/grex-v1.4.6"
+  cd "$srcdir/grex-1.4.6"
   install -Dm755 "target/release/grex" "$pkgdir/usr/bin/grex"
   install -Dm644 "README.md" "$pkgdir/usr/share/doc/grex/README.md"
   install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/grex/LICENSE"

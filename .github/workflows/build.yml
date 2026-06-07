@@ -144,6 +144,8 @@ jobs:
             -v $GITHUB_WORKSPACE/ci:/workspace/ci:ro \
             lfdevs/archlinuxarm:base-devel sleep infinity
           # Mount only the package directory and ci scripts into the container to avoid copying the whole repo
+          # Ensure updpkgsums is available inside the container to allow automated checksum updates
+          docker exec builder pacman -Sy --noconfirm updpkgsums || true
           docker exec \
             -e GPG_KEY="${{ vars.GPG_KEY_ID }}" \
             -e GPG_IMPORT="${{ secrets.GPG_PRIVATE_KEY }}" \
@@ -204,6 +206,20 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: packages-built
+
+      - name: Install GitHub CLI
+        run: |
+          set -eux
+          if command -v gh >/dev/null 2>&1; then
+            echo "gh already installed"
+          else
+            # Install official GitHub CLI on ubuntu-latest
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg >/dev/null 2>&1 || true
+            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg || true
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt update -y
+            sudo apt install -y gh || true
+          fi
 
       - name: Validate SSH and GPG secrets
         run: |

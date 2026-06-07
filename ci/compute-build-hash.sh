@@ -41,6 +41,12 @@ fi
 # This ensures sources that reference repo-local files (patches, extras) are accounted for
 echo "---LOCAL_SOURCE_FILES---" >> "$TMP_IN"
 if [ -s /tmp/ci_sources_$$.txt ]; then
+  # determine repo root if available to search referenced files outside package dir
+  REPO_ROOT=""
+  if git rev-parse --show-toplevel >/dev/null 2>&1; then
+    REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
+  fi
+
   while IFS= read -r src; do
     [ -z "$src" ] && continue
     # ignore URLs (scheme)
@@ -48,20 +54,50 @@ if [ -s /tmp/ci_sources_$$.txt ]; then
       echo "URL:$src" >> "$TMP_IN"
       continue
     fi
-    # Try direct file relative to package dir
+
+    # 1) Try direct file relative to package dir
     if [ -f "$src" ]; then
       sha=$(sha256sum "$src" | awk '{print $1}')
       echo "$sha  $src" >> "$TMP_IN"
       continue
     fi
-    # Try file relative to repo root (one level up and further)
-    if [ -f "../$src" ]; then
-      sha=$(sha256sum "../$src" | awk '{print $1}')
-      echo "$sha  ../$src" >> "$TMP_IN"
-      continue
+
+    # 2) Try searching upward from package dir up to repo root (covers ../patches, ../../common/ etc.)
+    if [ -n "$REPO_ROOT" ]; then
+      curr_dir="$(pwd)"
+      found=""
+      d="$curr_dir"
+      while :; do
+        if [ -f "$d/$src" ]; then
+          sha=$(sha256sum "$d/$src" | awk '{print $1}')
+          echo "$sha  $d/$src" >> "$TMP_IN"
+          found=1
+          break
+        fi
+        if [ "$d" = "$REPO_ROOT" ] || [ "$d" = "/" ]; then
+          break
+        fi
+        d=$(dirname "$d")
+      done
+      if [ -n "$found" ]; then
+        continue
+      fi
+
+      # 3) Try repo-root based glob expansion
+      matches=$(compgen -G "$REPO_ROOT/$src" 2>/dev/null || true)
+      if [ -n "$matches" ]; then
+        for f in $matches; do
+          if [ -f "$f" ]; then
+            sha=$(sha256sum "$f" | awk '{print $1}')
+            echo "$sha  $f" >> "$TMP_IN"
+          fi
+        done
+        continue
+      fi
     fi
-    # Glob expansion using compgen
-    matches=$(compgen -G "$src" || true)
+
+    # 4) Try glob expansion relative to package dir
+    matches=$(compgen -G "$src" 2>/dev/null || true)
     if [ -n "$matches" ]; then
       for f in $matches; do
         if [ -f "$f" ]; then
@@ -71,6 +107,7 @@ if [ -s /tmp/ci_sources_$$.txt ]; then
       done
       continue
     fi
+
     # Not found locally
     echo "MISSING:$src" >> "$TMP_IN"
   done < /tmp/ci_sources_$$.txt
@@ -78,7 +115,7 @@ fi
 
 # Hash contents of local package directory files (deterministic order)
 echo "---LOCAL_FILES---" >> "$TMP_IN"
-find . -type f -not -path './.git/*' -not -path './packages-built/*' -print0 | sort -z | xargs -0 -n1 -I{} sh -c 'sha256sum "{}" 2>/dev/null || true; echo "  {}"' >> "$TMP_IN" || true
+find . -type f -not -path './.git/*' -not -path './packages-built/*' -print0 | sort -z | xargs -0 -I{} sh -c 'sha256sum "{}" 2>/dev/null || true; printf "  %s\n" "{}"' >> "$TMP_IN" || true
 
 # Compute final hash
 HASH=$(sha256sum "$TMP_IN" | awk '{print $1}')

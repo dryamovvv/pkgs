@@ -68,7 +68,7 @@ build() {
   export KCFLAGS='-mcpu=cortex-a76+crypto -O2 -pipe'
   export KCPPFLAGS='-mcpu=cortex-a76+crypto -O2 -pipe'
 
-  make "$_image" modules dtbs
+  make -j"$(nproc)" "$_image" modules dtbs
 }
 
 _package() {

@@ -53,6 +53,7 @@ jobs:
   auto-fix:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       id-token: write
       contents: write
@@ -96,4 +97,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue comment ${{ inputs.issue-number }} --repo ${{ github.repository }} --body "🔄 **Auto-fix attempt ${{ inputs.attempt }}/3 was triggered.** Results will be visible in the next build run." || true
+          if [ "${{ job.status }}" = "success" ]; then
+            EMOJI="✅"
+            MSG="Auto-fix attempt ${{ inputs.attempt }}/3 completed. Check the next build run for results."
+          elif [ "${{ job.status }}" = "cancelled" ]; then
+            EMOJI="⛔"
+            MSG="Auto-fix attempt ${{ inputs.attempt }}/3 was cancelled."
+          else
+            EMOJI="❌"
+            MSG="Auto-fix attempt ${{ inputs.attempt }}/3 failed. Manual intervention may be needed."
+          fi
+          gh issue comment ${{ inputs.issue-number }} --repo ${{ github.repository }} --body "${EMOJI} **${MSG}**" || true

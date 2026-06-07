@@ -38,11 +38,15 @@ for PKG in $FAILED_PKGS; do
 
     LABELS=$(gh issue view "$EXISTING" --repo "${REPO}" --json labels --jq '.labels[].name')
 
+    MAX_ATTEMPT=0
     for i in 1 2 3; do
       if echo "$LABELS" | grep -q "fix-attempt-${i}"; then
-        ATTEMPT=$((i + 1))
+        if [ "$i" -gt "$MAX_ATTEMPT" ]; then
+          MAX_ATTEMPT=$i
+        fi
       fi
     done
+    ATTEMPT=$((MAX_ATTEMPT + 1))
 
     for old_label in fix-attempt-1 fix-attempt-2 fix-attempt-3; do
       gh issue edit "$EXISTING" --repo "${REPO}" --remove-label "$old_label" 2>/dev/null || true

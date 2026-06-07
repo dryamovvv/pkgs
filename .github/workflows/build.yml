@@ -99,6 +99,11 @@ jobs:
           mkdir -p packages-built/${{ matrix.pkg }}
           cp -r /tmp/build-cache/${{ matrix.pkg }}/* packages-built/${{ matrix.pkg }}/ || true
 
+      - name: Ensure cache directories exist
+        run: |
+          mkdir -p /tmp/build-cache/${{ matrix.pkg }}
+          mkdir -p /tmp/ccache /tmp/cargo-registry /tmp/cargo-git /tmp/pacman-cache
+
       # ── Docker image cache ──
       - name: Cache Docker image
         id: docker-cache

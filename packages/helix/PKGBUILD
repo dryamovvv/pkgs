@@ -33,6 +33,7 @@ sha256sums=('27c8bc3eba46bc7bab1e3629c6b28ff94882eeff17366b3ea69cd8ceffba7541')
 
 prepare() {
   cd "$srcdir/$pkgname-$pkgver"
+  sed -i 's|dannylongeuay/tree-sitter-go-template|ngalaiko/tree-sitter-go-template|g' languages.toml
   cargo fetch --locked --target aarch64-unknown-linux-gnu
 }
 

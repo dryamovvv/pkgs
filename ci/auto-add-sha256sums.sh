@@ -26,9 +26,6 @@ for pkgdir in packages/*; do
   echo "[work] $pkgdir: missing sha256sums — attempting to compute"
   branch="${BRANCH_PREFIX}/${pkgdir##*/}-shasums"
 
-  # Create branch
-  git checkout -b "$branch"
-
   # Try updpkgsums if available
   if command -v updpkgsums >/dev/null 2>&1; then
     echo "Running updpkgsums in $pkgdir"
@@ -49,10 +46,9 @@ for pkgdir in packages/*; do
       pushd "$pkgdir" >/dev/null 2>&1 || true
       mapfile -t _SOURCES < <(bash -c 'source PKGBUILD >/dev/null 2>&1; for s in "${source[@]}"; do printf "%s\n" "$s"; done') || true
       if [ "${#_SOURCES[@]}" -eq 0 ]; then
-        echo "No sources discovered for $pkgdir; aborting"
+        echo "No sources discovered for $pkgdir; skipping"
         popd >/dev/null 2>&1 || true
-        git checkout -
-        git branch -D "$branch" || true
+        git checkout main >/dev/null 2>&1 || true
         continue
       fi
       TMPD=$(mktemp -d)
@@ -71,8 +67,18 @@ for pkgdir in packages/*; do
         if printf '%s' "$src" | grep -qE '^[a-zA-Z][a-zA-Z0-9+.-]*://'; then
           fname=$(basename "$src")
           echo "Downloading $src"
-          if ! curl -L --fail -s -o "$TMPD/$fname" "$src"; then
-            echo "Download failed: $src"
+          attempt=0
+          success=0
+          while [ $attempt -lt 3 ]; do
+            if curl -L --fail -s -o "$TMPD/$fname" "$src"; then
+              success=1
+              break
+            fi
+            attempt=$((attempt+1))
+            sleep $((attempt*2))
+          done
+          if [ $success -ne 1 ]; then
+            echo "Download failed after retries: $src"
             failed=1
             break
           fi
@@ -100,8 +106,7 @@ for pkgdir in packages/*; do
         echo "Manual checksum generation failed for $pkgdir; cleaning up"
         rm -rf "$TMPD" || true
         popd >/dev/null 2>&1 || true
-        git checkout -
-        git branch -D "$branch" || true
+        git checkout main >/dev/null 2>&1 || true
         continue
       fi
       # append sha256sums block to absolute PKGBUILD path
@@ -118,13 +123,14 @@ for pkgdir in packages/*; do
 
   # Verify we added something
   if ! sed -n '/^sha256sums=(/,/)/p' "$PKGBUILD" | grep -q '\\S'; then
-    echo "Failed to add sha256sums for $pkgdir — aborting branch"
-    git checkout -
-    git branch -D "$branch" || true
+    echo "Failed to add sha256sums for $pkgdir — skipping"
+    git checkout main >/dev/null 2>&1 || true
     continue
   fi
 
   # Commit and push
+  # create feature branch for this package (overwrite if exists locally)
+  git checkout -B "$branch" >/dev/null 2>&1 || true
   git add "$PKGBUILD"
   # parse commit author "Name <email>"
   NAME="${COMMIT_AUTHOR%% <*}"

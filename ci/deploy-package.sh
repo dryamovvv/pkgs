@@ -31,7 +31,7 @@ if [ -z "$PKGFILE" ] || [ ! -f "$PKGFILE" ]; then
 	exit 1
 fi
 PKGNAME=$(basename "$PKGFILE")
-STAGING="$STAGING_BASE/$PKGNAME"
+STAGING="$STAGING_BASE/$PKGNAME-deploy"
 
 echo "=== Deploying $PKGNAME ==="
 

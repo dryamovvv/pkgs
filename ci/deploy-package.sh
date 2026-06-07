@@ -132,4 +132,3 @@ done
 
 echo "=== Deploy complete ==="
 rm -rf "$WORKDIR"
-// test2

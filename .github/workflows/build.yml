@@ -19,6 +19,11 @@ on:
         description: "Force running a specific package (for testing)"
         required: false
         default: ""
+      force_rebuild_all:
+        type: boolean
+        description: "Force rebuild all packages ignoring cache"
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -39,8 +44,16 @@ jobs:
       - id: set-matrix
         env:
           FORCE_PKG: ${{ github.event.inputs.force_pkg }}
+          FORCE_REBUILD_ALL: ${{ github.event.inputs.force_rebuild_all }}
         run: |
-          if [ -n "${FORCE_PKG:-}" ]; then
+          if [ "${FORCE_REBUILD_ALL:-false}" = "true" ]; then
+            ALL=$(ls -d packages/*/ 2>/dev/null | sed 's|packages/||;s|/||')
+            if [ -z "$ALL" ]; then
+              echo "matrix=[]" >> $GITHUB_OUTPUT
+            else
+              echo "matrix=$(echo "$ALL" | jq -R -s -c 'split("\n") | map(select(. != ""))')" >> $GITHUB_OUTPUT
+            fi
+          elif [ -n "${FORCE_PKG:-}" ]; then
             echo "matrix=[\"${FORCE_PKG}\"]" >> $GITHUB_OUTPUT
           else
             echo "matrix=$(ci/detect-changes.sh)" >> $GITHUB_OUTPUT
@@ -61,6 +74,8 @@ jobs:
 
       - name: Compute build input hash
         id: compute-hash
+        env:
+          FORCE_REBUILD_ALL: ${{ github.event.inputs.force_rebuild_all }}
         run: |
           chmod +x ci/run-compute-hash.sh ci/compute-build-hash.sh
           ./ci/run-compute-hash.sh packages/${{ matrix.pkg }}
@@ -168,7 +183,13 @@ jobs:
         run: |
           sudo chown -R $(id -u):$(id -g) /tmp/cargo-registry /tmp/cargo-git 2>/dev/null || true
 
-      - name: List packages
+      - name: List packages (from cache)
+        if: steps.built-cache.outputs.cache-hit == 'true'
+        run: |
+          find packages-built -name '*.pkg.tar.*' -type f -ls
+
+      - name: List packages (from build)
+        if: steps.built-cache.outputs.cache-hit != 'true'
         run: |
           docker cp builder:/workspace/packages ./packages-built
           find packages-built -name '*.pkg.tar.*' -type f -ls
@@ -305,4 +326,4 @@ jobs:
             "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             "${{ github.sha }}" \
             "${{ github.run_id }}" \
-            '${{ needs.detect.outputs.matrix }}'
+            '${{ needs.detect-changed-packages.outputs.matrix }}'

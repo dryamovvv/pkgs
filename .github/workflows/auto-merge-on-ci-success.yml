@@ -19,6 +19,7 @@ jobs:
 
       - name: Find and merge auto-fix PR for commit
         env:
+          GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |

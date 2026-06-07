@@ -10,17 +10,31 @@ url="https://github.com/artempyanykh/marksman"
 license=('MIT')
 options=('!debug')
 depends=()
-makedepends=('dotnet-sdk-9.0')
+makedepends=('curl')
 source=("https://github.com/artempyanykh/marksman/archive/refs/tags/2026-02-08.tar.gz")
 sha256sums=('a3ba5f8ef5be5d7ede2ec5ae9f303d2d776f476734ff66254be8e6df0e0f090e')
 
 prepare() {
   cd "$srcdir/marksman-2026-02-08"
+
+  export DOTNET_ROOT="$srcdir/dotnet"
+  mkdir -p "$DOTNET_ROOT"
+
+  if [ ! -f "$DOTNET_ROOT/dotnet" ]; then
+    curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- \
+      --channel 9.0 \
+      --install-dir "$DOTNET_ROOT" \
+      --architecture arm64
+  fi
+
+  export PATH="$DOTNET_ROOT:$PATH"
   dotnet restore Marksman.sln
 }
 
 build() {
   cd "$srcdir/marksman-2026-02-08"
+  export DOTNET_ROOT="$srcdir/dotnet"
+  export PATH="$DOTNET_ROOT:$PATH"
   export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
   export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
   export LDFLAGS="-Wl,-z,max-page-size=0x4000"
@@ -40,6 +54,8 @@ build() {
 
 check() {
   cd "$srcdir/marksman-2026-02-08"
+  export DOTNET_ROOT="$srcdir/dotnet"
+  export PATH="$DOTNET_ROOT:$PATH"
   dotnet test --configuration Release --no-build || true
 }
 

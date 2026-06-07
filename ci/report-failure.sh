@@ -1,20 +1,22 @@
 #!/bin/bash
 set -euo pipefail
 
-REPO="${1:?Usage: report-failure.sh <repo> <run_url> <commit_sha> <packages_json>}"
+REPO="${1:?Usage: report-failure.sh <repo> <run_url> <commit_sha> <run_id> <packages_json>}"
 RUN_URL="${2:?}"
 COMMIT_SHA="${3:?}"
-PACKAGES_JSON="${4:?}"
+RUN_ID="${4:?}"
+PACKAGES_JSON="${5:?}"
 
 COMMIT_SHORT="$(echo "$COMMIT_SHA" | cut -c1-7)"
 
 FAILED_PKGS=""
+JOBS_JSON=$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs" --jq '.jobs[] | select(.conclusion == "failure") | .name' 2>/dev/null || echo "")
 
-for PKG in $(echo "$PACKAGES_JSON" | jq -r '.[]'); do
-  FAILED_PKGS="$FAILED_PKGS $PKG"
-done
+if [ -n "$JOBS_JSON" ]; then
+  FAILED_PKGS=$(echo "$JOBS_JSON" | grep -oP '(?<=build \()[\w.-]+(?=\))' | sort -u)
+fi
 
-if [ -z "$(echo "$FAILED_PKGS" | tr -d ' ')" ]; then
+if [ -z "$FAILED_PKGS" ]; then
   FAILED_PKGS=$(echo "$PACKAGES_JSON" | jq -r '.[]' | tr '\n' ' ')
 fi
 
@@ -51,7 +53,7 @@ for PKG in $FAILED_PKGS; do
       gh issue edit "$EXISTING" --repo "${REPO}" --add-label "unfixable"
       gh issue comment "$EXISTING" --repo "${REPO}" --body "$(
         cat <<EOF
-🚨 **Attempt limit reached** (3/3). Auto-fix is disabled for this package. Manual intervention required.
+Attempt limit reached (3/3). Auto-fix is disabled for this package. Manual intervention required.
 
 Run URL: ${RUN_URL}
 Commit: ${COMMIT_SHORT}
@@ -62,7 +64,7 @@ EOF
 
     gh issue comment "$EXISTING" --repo "${REPO}" --body "$(
       cat <<EOF
-🔴 **Build failed again** (attempt ${ATTEMPT}/3)
+Build failed again (attempt ${ATTEMPT}/3)
 
 Run URL: ${RUN_URL}
 Commit: ${COMMIT_SHORT}
@@ -93,4 +95,12 @@ EOF
   fi
 
   gh issue edit "$EXISTING" --repo "${REPO}" --add-label "fix-attempt-${ATTEMPT}"
+
+  echo "Triggering auto-fix workflow for issue #${EXISTING}, attempt ${ATTEMPT}"
+  gh workflow run opencode.yml \
+    --repo "${REPO}" \
+    --ref main \
+    -f issue-number="${EXISTING}" \
+    -f attempt="${ATTEMPT}" \
+    -f run-url="${RUN_URL}" || echo "Warning: Failed to trigger auto-fix workflow"
 done

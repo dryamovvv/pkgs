@@ -20,9 +20,26 @@ SSH_OPTS="-i $SSH_KEY -o ConnectTimeout=10 -o Port=$SSH_PORT"
 SCP_OPTS="-O $SSH_OPTS"
 REMOTE="$SSH_USER@$SSH_HOST"
 
+GPG_KEY="${GPG_KEY:-}"
+GPG_IMPORT="${GPG_IMPORT:-}"
+GPG_PASSPHRASE="${GPG_PASSPHRASE:-}"
+
+if [ -n "$GPG_KEY" ] && [ -n "$GPG_IMPORT" ]; then
+	echo "=== Setting up GPG signing for deploy ==="
+	echo "$GPG_IMPORT" | gpg --import --batch --no-tty 2>&1 || true
+	echo "$GPG_IMPORT" | gpg --import --batch --no-tty 2>&1 || true
+	if [ -n "$GPG_PASSPHRASE" ]; then
+		gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --pinentry-mode loopback \
+			--edit-key "$GPG_KEY" trust quit <<EOF
+5
+y
+EOF
+	fi
+fi
+
 cd /workspace
 
-PKGFILE=$(find "$PKGDIR" -maxdepth 1 -name '*.pkg.tar.*' -type f 2>/dev/null | head -1)
+PKGFILE=$(find "$PKGDIR" -maxdepth 1 -name '*.pkg.tar.*' ! -name '*.sig' -type f 2>/dev/null | head -1)
 if [ -n "$PKGFILE" ]; then
 	PKGFILE="/workspace/$PKGFILE"
 fi
@@ -32,6 +49,14 @@ if [ -z "$PKGFILE" ] || [ ! -f "$PKGFILE" ]; then
 fi
 PKGNAME=$(basename "$PKGFILE")
 STAGING="$STAGING_BASE/$PKGNAME-deploy"
+
+PKG_SIG="${PKGFILE}.sig"
+if [ -f "$PKG_SIG" ]; then
+	PKGSIG_NAME=$(basename "$PKG_SIG")
+	echo "=== Found package signature: $PKGSIG_NAME ==="
+else
+	PKG_SIG=""
+fi
 
 echo "=== Deploying $PKGNAME ==="
 
@@ -53,11 +78,17 @@ for attempt in $(seq 1 10); do
 		rm -rf "$WORKDIR"
 		continue
 	fi
+	if [ -n "$PKG_SIG" ]; then
+		scp $SCP_OPTS "$PKG_SIG" "$REMOTE:$STAGING/" 2>/dev/null || true
+	fi
 
 	DB_EXISTS=$(
 		ssh $SSH_OPTS "$REMOTE" "flock -w 30 $LOCKFILE -c \"
       if [ -f $REPO_PATH/repo.db.tar.gz ]; then
         cp $REPO_PATH/repo.db.tar.gz $STAGING/db_current.tar.gz
+        if [ -f $REPO_PATH/repo.db.tar.gz.sig ]; then
+          cp $REPO_PATH/repo.db.tar.gz.sig $STAGING/db_current.tar.gz.sig
+        fi
         echo YES
       else
         echo NO
@@ -78,8 +109,15 @@ for attempt in $(seq 1 10); do
 			continue
 		fi
 		DB_MD5=$(md5sum "$WORKDIR/repo.db.tar.gz" | cut -d' ' -f1)
+		scp $SCP_OPTS "$REMOTE:$STAGING/db_current.tar.gz.sig" "$WORKDIR/repo.db.tar.gz.sig" 2>/dev/null || true
 		cp "$PKGFILE" "$WORKDIR/"
-		if ! (cd "$WORKDIR" && repo-add -R repo.db.tar.gz "$PKGNAME"); then
+		[ -n "$PKG_SIG" ] && cp "$PKG_SIG" "$WORKDIR/"
+
+		REPO_ADD_CMD="repo-add -R repo.db.tar.gz $PKGNAME"
+		if [ -n "$GPG_KEY" ]; then
+			REPO_ADD_CMD="repo-add -R -s -k $GPG_KEY repo.db.tar.gz $PKGNAME"
+		fi
+		if ! (cd "$WORKDIR" && eval "$REPO_ADD_CMD"); then
 			echo "repo-add failed, retrying..."
 			sleep 3
 			rm -rf "$WORKDIR"
@@ -93,7 +131,13 @@ for attempt in $(seq 1 10); do
 		fi
 	else
 		cp "$PKGFILE" "$WORKDIR/"
-		if ! (cd "$WORKDIR" && repo-add repo.db.tar.gz "$PKGNAME"); then
+		[ -n "$PKG_SIG" ] && cp "$PKG_SIG" "$WORKDIR/"
+
+		REPO_ADD_CMD="repo-add repo.db.tar.gz $PKGNAME"
+		if [ -n "$GPG_KEY" ]; then
+			REPO_ADD_CMD="repo-add -s -k $GPG_KEY repo.db.tar.gz $PKGNAME"
+		fi
+		if ! (cd "$WORKDIR" && eval "$REPO_ADD_CMD"); then
 			echo "repo-add failed, retrying..."
 			sleep 3
 			rm -rf "$WORKDIR"
@@ -129,9 +173,11 @@ for attempt in $(seq 1 10); do
 		rm -rf "$WORKDIR"
 		continue
 	fi
+	scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz.sig" "$REMOTE:$STAGING/db_new.tar.gz.sig" 2>/dev/null || true
 	scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz.old" "$REMOTE:$STAGING/db_old.tar.gz" 2>/dev/null || true
 	scp $SCP_OPTS "$WORKDIR/repo.files.tar.gz" "$REMOTE:$STAGING/db_files.tar.gz" 2>/dev/null || true
 	scp $SCP_OPTS "$WORKDIR/repo.files.tar.gz.old" "$REMOTE:$STAGING/db_files_old.tar.gz" 2>/dev/null || true
+	scp $SCP_OPTS "$WORKDIR/repo.files.tar.gz.sig" "$REMOTE:$STAGING/db_files.tar.gz.sig" 2>/dev/null || true
 	scp $SCP_OPTS "$WORKDIR/index.html" "$REMOTE:$STAGING/" 2>/dev/null || true
 
 	DEPLOY_RESULT=$(
@@ -163,15 +209,19 @@ EXPECTED_MD5="$4"
   fi
 
   mv "$STAGING"/*.pkg.tar.* "$REPO_PATH/" 2>/dev/null || true
+  mv "$STAGING"/*.pkg.tar.*.sig "$REPO_PATH/" 2>/dev/null || true
   mv "$STAGING"/db_new.tar.gz       "$REPO_PATH/repo.db.tar.gz"
+  mv "$STAGING"/db_new.tar.gz.sig   "$REPO_PATH/repo.db.tar.gz.sig" 2>/dev/null || true
   mv "$STAGING"/db_old.tar.gz       "$REPO_PATH/repo.db.tar.gz.old"  2>/dev/null || true
   mv "$STAGING"/db_files.tar.gz     "$REPO_PATH/repo.files.tar.gz"   2>/dev/null || true
+  mv "$STAGING"/db_files.tar.gz.sig "$REPO_PATH/repo.files.tar.gz.sig" 2>/dev/null || true
   mv "$STAGING"/db_files_old.tar.gz "$REPO_PATH/repo.files.tar.gz.old" 2>/dev/null || true
   mv "$STAGING"/index.html          "$REPO_PATH/../index.html"        2>/dev/null || true
 
-  rm -f "$STAGING"/db_current.tar.gz "$STAGING"/db_new.tar.gz \
+  rm -f "$STAGING"/db_current.tar.gz "$STAGING"/db_current.tar.gz.sig \
+        "$STAGING"/db_new.tar.gz "$STAGING"/db_new.tar.gz.sig \
         "$STAGING"/db_old.tar.gz "$STAGING"/db_files.tar.gz \
-        "$STAGING"/db_files_old.tar.gz
+        "$STAGING"/db_files.tar.gz.sig "$STAGING"/db_files_old.tar.gz
   echo "DEPLOY_OK"
 ) 200>"$LOCKFILE"
 SSH_SCRIPT

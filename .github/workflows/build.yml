@@ -102,7 +102,11 @@ jobs:
             -v /tmp/cargo-git:/home/builder/.cargo/git \
             lfdevs/archlinuxarm:base-devel sleep infinity
           docker cp . builder:/workspace/
-          docker exec builder bash -c "cd /workspace && ci/build-package.sh ${{ matrix.pkg }}"
+          docker exec \
+            -e GPG_KEY="${{ vars.GPG_KEY_ID }}" \
+            -e GPG_IMPORT="${{ secrets.GPG_PRIVATE_KEY }}" \
+            -e GPG_PASSPHRASE="${{ secrets.GPG_PASSPHRASE }}" \
+            builder bash -c "cd /workspace && ci/build-package.sh ${{ matrix.pkg }}"
 
       - name: Fix cargo cache permissions
         if: always()
@@ -156,6 +160,9 @@ jobs:
             -e SSH_PORT="${{ secrets.SSH_PORT }}" \
             -e SSH_USER="${{ secrets.SSH_USER }}" \
             -e REPO_PATH="${{ secrets.SSH_REPO_PATH }}" \
+            -e GPG_KEY="${{ vars.GPG_KEY_ID }}" \
+            -e GPG_IMPORT="${{ secrets.GPG_PRIVATE_KEY }}" \
+            -e GPG_PASSPHRASE="${{ secrets.GPG_PASSPHRASE }}" \
             builder bash -c "cd /workspace && ci/deploy-package.sh packages/${{ matrix.pkg }}"
 
       # ── Artifact backup ──

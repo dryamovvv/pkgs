@@ -9,11 +9,17 @@
 ```ini
 # /etc/pacman.conf — добавьте в конец:
 [custom-repo]
-SigLevel = Optional TrustedOnly
+SigLevel = Required TrustedOnly
 Server = http://pkgs.dryam.ru/aarch64
 ```
 
+Импортируйте ключ подписи:
+
 ```bash
+sudo pacman-key --recv-keys 0F98FE406BB366EB10AFAD8D90B35929BB827D35
+#или из файла:
+sudo pacman-key --add keys/pgp/BB827D35.asc
+sudo pacman-key --lsign-key 0F98FE406BB366EB10AFAD8D90B35929BB827D35
 sudo pacman -Sy
 ```
 
@@ -50,12 +56,15 @@ CI автоматически соберёт и задеплоит пакет.
 
 ```
 pkgs/
+├── keys/
+│   └── pgp/
+│       └── BB827D35.asc   # Публичный ключ подписи репозитория
 ├── packages/              # PKGBUILD'ы пакетов
 │   ├── <pkg-name>/
 │   │   └── PKGBUILD
 │   └── ...
 ├── ci/
-│   ├── build-package.sh   # Сборка в контейнере (ccache, makepkg)
+│   ├── build-package.sh   # Сборка в контейнере (ccache, makepkg, GPG sign)
 │   ├── deploy-package.sh   # Деплой на сервер через SSH/SCP с flock-блокировкой
 │   └── detect-changes.sh  # Детект изменённых пакетов
 ├── .github/workflows/

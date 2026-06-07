@@ -2,11 +2,17 @@
 *.pkg.tar.zst
 *.pkg.tar.xz
 *.pkg.tar.gz
+*.pkg.tar.xz.sig
 
 # Build artifacts
 pkg/
 src/
 repo/
+
+# GPG private keys (never commit)
+*.gpg
+*.gpg~
+secring.*
 
 # IDE
 .vscode/

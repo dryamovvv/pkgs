@@ -89,8 +89,17 @@ Retry-based (10 попыток) деплой внутри arch-контейне�
 
 ```ini
 [custom-repo]
-SigLevel = Optional TrustedOnly
+SigLevel = Required TrustedOnly
 Server = http://pkgs.dryam.ru/aarch64
+```
+
+Импорт ключа подписи:
+
+```bash
+sudo pacman-key --recv-keys 0F98FE406BB366EB10AFAD8D90B35929BB827D35
+#или из файла:
+sudo pacman-key --add keys/pgp/BB827D35.asc
+sudo pacman-key --lsign-key 0F98FE406BB366EB10AFAD8D90B35929BB827D35
 ```
 
 ## Добавление пакета
@@ -107,6 +116,15 @@ Server = http://pkgs.dryam.ru/aarch64
 ## CI настройки
 
 Деплой на удалённый сервер: роутер Keenetic (`dryam.ru:222`), файлы на `/dev/sda1`, веб-сервер lighttpd на порту 80.
+
+### GPG подпись
+
+Все пакеты и repo.db подписываются RSA-4096 ключом (`pkgs.dryam.ru Repo Signing Key <repo@dryam.ru>`, fingerprint `0F98FE406BB366EB10AFAD8D90B35929BB827D35`).
+
+GitHub Secrets/Variables:
+- `GPG_PRIVATE_KEY` — ASCII-armored private key (secret)
+- `GPG_PASSPHRASE` — passphrase для ключа (secret)
+- `GPG_KEY_ID` — fingerprint ключа (variable: `0F98FE406BB366EB10AFAD8D90B35929BB827D35`)
 
 ## Пакеты
 

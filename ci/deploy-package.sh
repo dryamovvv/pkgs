@@ -118,7 +118,7 @@ for attempt in $(seq 1 10); do
 
 	# ── 5. Atomic deploy with flock + conflict detection ──
 	DEPLOY_RESULT=$(
-		ssh $SSH_OPTS "$REMOTE" bash -s -- "$REPO_PATH" "$STAGING" "$LOCKFILE" "$DB_MD5" <<'SSH_SCRIPT'
+		ssh $SSH_OPTS "$REMOTE" bash -s -- "$REPO_PATH" "$STAGING" "$LOCKFILE" "$DB_MD5" <<'SSH_SCRIPT' || true
 set -euo pipefail
 REPO_PATH="$1"
 STAGING="$2"

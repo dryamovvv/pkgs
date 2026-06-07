@@ -203,24 +203,77 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
 | Package built as `.xz` but expected `.zst`         | CI glob uses `*.pkg.tar.*` to match both                                                                                      |
 | Git source: `$pkgname` dir name mismatch           | Git clones into `$pkgname` (bare name), not `$pkgname-$pkgver` — use `cp -r` in `prepare()`                                   |
 
-### 4. Create directory and commit
+### 4. Create per-package documentation
+
+Generate `packages/<pkg-name>/AGENTS.md` (for the agent — build specifics, chosen features, flag rationale):
+
+```markdown
+# <pkg-name>
+
+| Attribute | Value |
+|-----------|-------|
+| Version | `<version>` |
+| Build system | `<build-system>` |
+| Features | `<enabled-features>` |
+
+## RPi5 flags
+
+```
+CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+LDFLAGS="-Wl,-z,max-page-size=0x4000"
+<language-specific-flags>
+```
+
+## Notes
+
+<gotchas, quirks, why certain opts were chosen>
+```
+
+Generate `packages/<pkg-name>/README.md` (for humans — package summary, build instructions):
+
+```markdown
+# <pkg-name>
+
+<pkgdesc>
+
+## Building
+
+```bash
+makepkg -s
+```
+
+## Dependencies
+
+<runtime-deps-summary>
+
+## Features
+
+| Feature | Enabled | Description |
+|---------|---------|-------------|
+| <name>  | yes/no  | <what it does> |
+```
+
+### 5. Create directory and commit
 
 ```bash
 mkdir packages/<pkg-name>
 # create packages/<pkg-name>/PKGBUILD
+# create packages/<pkg-name>/AGENTS.md
+# create packages/<pkg-name>/README.md
 # add local files if needed (configs, patches, .install)
 git add packages/<pkg-name>
 git commit -m "feat: add <pkg-name> <version>"
 git push
 ```
 
-### 5. Update AGENTS.md and README.md
+### 6. Update root AGENTS.md and README.md
 
-Add the new package to the package registry in both `AGENTS.md` and `README.md` at the `## Packages` section. Always keep the list sorted alphabetically.
+Add the new package to the package registry in both root `AGENTS.md` and `README.md` at the `## Packages` section. Always keep the list sorted alphabetically.
 
 Format: `| <pkg-name> | <one-line description> | <version> |`
 
-### 6. Monitor CI until full success
+### 7. Monitor CI until full success
 
 **Do not stop until the package is built and deployed.** After `git push`:
 
@@ -243,5 +296,5 @@ Format: `| <pkg-name> | <one-line description> | <version> |`
 
 User: "add yazi"
 
-Response: research yazi → find its build options → ask user about each → create PKGBUILD → update AGENTS.md and README.md → commit → push → monitor CI until deployed.
+Response: research yazi → find its build options → ask user about each → create PKGBUILD + per-package AGENTS.md/README.md → update root AGENTS.md and README.md → commit → push → monitor CI until deployed.
 ````

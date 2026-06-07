@@ -153,3 +153,4 @@ fi
 
 # Output only the hash to stdout (suitable for capture)
 printf "%s" "$HASH"
+# cache stress test

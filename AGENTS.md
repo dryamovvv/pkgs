@@ -108,12 +108,13 @@ GitHub Pages: Source = **Deploy from a branch** → `gh-pages`. Не "GitHub Act
 
 ## Пакеты
 
-| Пакет      | Описание                                   | Версия |
-| ---------- | ------------------------------------------ | ------ |
-| arch-opsd  | systemd service manager                    | latest |
-| atuin      | Shell history with sync                    | latest |
-| bat        | cat(1) clone with wings                    | 0.26.1 |
-| helix      | Modal terminal-based text editor           | latest |
-| kmscon     | KMS/DRM-based virtual console              | latest |
-| mozillavpn | Fast, secure VPN by Mozilla                | latest |
-| zellij     | Terminal workspace with batteries included | 0.44.3 |
+| Пакет      | Описание                                     | Версия |
+| ---------- | -------------------------------------------- | ------ |
+| arch-opsd  | systemd service manager                      | latest |
+| atuin      | Shell history with sync                      | latest |
+| bat        | cat(1) clone with wings                      | 0.26.1 |
+| helix      | Modal terminal-based text editor             | latest |
+| kmscon     | KMS/DRM-based virtual console                | latest |
+| mdv        | Browser-quality Markdown viewer for terminal | 0.1.1  |
+| mozillavpn | Fast, secure VPN by Mozilla                  | latest |
+| zellij     | Terminal workspace with batteries included   | 0.44.3 |

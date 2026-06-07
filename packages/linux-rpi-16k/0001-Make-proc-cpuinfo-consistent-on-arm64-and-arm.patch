@@ -1,0 +1,33 @@
+From 58178b2a9d2f175da2ce8e2647eec49f93f5b1ed Mon Sep 17 00:00:00 2001
+From: dryamovvv <dryamovvv@users.noreply.github.com>
+Date: Sun, 7 Jun 2026 08:00:00 +0000
+Subject: [PATCH] Make /proc/cpuinfo consistent on arm64 and arm
+
+On arm, /proc/cpuinfo always shows "model name", while on arm64 it
+only shows when the process is running in compat mode. Remove the
+compat check so lscpu and other tools see consistent output.
+
+Signed-off-by: dryamovvv <dryamovvv@users.noreply.github.com>
+---
+ arch/arm64/kernel/cpuinfo.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/arch/arm64/kernel/cpuinfo.c b/arch/arm64/kernel/cpuinfo.c
+index 6eba2b6e564af..e12cb814151be 100644
+--- a/arch/arm64/kernel/cpuinfo.c
++++ b/arch/arm64/kernel/cpuinfo.c
+@@ -225,9 +225,7 @@ static int c_show(struct seq_file *m, void *v)
+ 	 * "processor".  Give glibc what it expects.
+ 	 */
+ 	seq_printf(m, "processor\t: %d\n", cpu);
+-	if (compat)
+-		seq_printf(m, "model name\t: ARMv8 Processor rev %d (%s)\n",
+-			   MIDR_REVISION(midr), COMPAT_ELF_PLATFORM);
++	seq_printf(m, "model name\t: ARMv8 Processor rev %d (%s)\n",
++		   MIDR_REVISION(midr), COMPAT_ELF_PLATFORM);
+ 
+ 	seq_printf(m, "BogoMIPS\t: %lu.%02lu\n",
+ 		   loops_per_jiffy / (500000UL/HZ),
+-- 
+2.48.1
+

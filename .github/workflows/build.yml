@@ -28,7 +28,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
       - id: set-matrix
@@ -43,12 +43,12 @@ jobs:
       matrix:
         pkg: ${{ fromJSON(needs.detect.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # ── Docker image cache ──
       - name: Cache Docker image
         id: docker-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /tmp/docker-image.tar
           key: docker-archlinuxarm-v2-${{ hashFiles('.github/workflows/build.yml') }}
@@ -65,7 +65,7 @@ jobs:
 
       # ── Pacman package cache ──
       - name: Cache pacman packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /tmp/pacman-cache
           key: pacman-cache-v2-${{ hashFiles('packages/*/PKGBUILD') }}
@@ -73,7 +73,7 @@ jobs:
 
       # ── ccache ──
       - name: Cache ccache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /tmp/ccache
           key: ccache-v2-${{ matrix.pkg }}-${{ hashFiles(format('packages/{0}/PKGBUILD', matrix.pkg)) }}
@@ -81,7 +81,7 @@ jobs:
 
       # ── Cargo cache (Rust) ──
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             /tmp/cargo-registry
@@ -131,7 +131,7 @@ jobs:
 
       # ── Artifact backup ──
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.pkg }}
           path: packages-built/${{ matrix.pkg }}/*.pkg.tar.*

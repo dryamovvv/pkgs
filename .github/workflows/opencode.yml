@@ -48,7 +48,7 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
@@ -83,7 +83,7 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
@@ -108,7 +108,7 @@ jobs:
 
       - name: Create auto-fix branch and PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           set -euo pipefail
           # Ensure we have full history
@@ -160,7 +160,7 @@ jobs:
       - name: Comment on issue after auto-fix
         if: always()
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           if [ "${{ job.status }}" = "success" ]; then
             EMOJI="✅"

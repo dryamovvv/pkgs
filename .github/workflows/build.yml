@@ -245,68 +245,31 @@ jobs:
         with:
           path: packages-built
 
-      - name: Install GitHub CLI
+      - name: Validate GPG secrets
         run: |
-          set -eux
-          if command -v gh >/dev/null 2>&1; then
-            echo "gh already installed"
-          else
-            # Install official GitHub CLI on ubuntu-latest
-            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg >/dev/null 2>&1 || true
-            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg || true
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-            sudo apt update -y
-            sudo apt install -y gh || true
-          fi
-
-      - name: Validate SSH and GPG secrets
-        run: |
-          : "${SSH_HOST:?ERROR: SSH_HOST secret not set}"
-          : "${SSH_PORT:?ERROR: SSH_PORT secret not set}"
-          : "${SSH_USER:?ERROR: SSH_USER secret not set}"
-          : "${SSH_PRIVATE_KEY:?ERROR: SSH_PRIVATE_KEY secret not set}"
-          : "${SSH_REPO_PATH:?ERROR: SSH_REPO_PATH secret not set}"
           : "${GPG_PASSPHRASE:?ERROR: GPG_PASSPHRASE secret not set}"
-          echo "All deploy secrets are configured"
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_REPO_PATH: ${{ secrets.SSH_REPO_PATH }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-          GPG_IMPORT: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_KEY: ${{ vars.GPG_KEY_ID }}
-
-      - name: Prepare SSH key and known_hosts
-        run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/ssh-deploy-key
-          chmod 600 /tmp/ssh-deploy-key
-          mkdir -p ~/.ssh
-          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          echo "GPG secrets are configured"
 
       - name: Start deploy container
         run: |
           docker pull lfdevs/archlinuxarm:base-devel
           docker rm -f deployer 2>/dev/null || true
           docker run -d --name deployer \
-            -e SSH_HOST='${{ secrets.SSH_HOST }}' \
-            -e SSH_PORT='${{ secrets.SSH_PORT }}' \
-            -e SSH_USER='${{ secrets.SSH_USER }}' \
-            -e REPO_PATH='${{ secrets.SSH_REPO_PATH }}' \
-            -e GPG_PASSPHRASE='${{ secrets.GPG_PASSPHRASE }}' \
-            -e GPG_IMPORT='${{ secrets.GPG_PRIVATE_KEY }}' \
-            -e GPG_KEY='${{ vars.GPG_KEY_ID }}' \
+            -e GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+            -e GITHUB_REPOSITORY="${{ github.repository }}" \
+            -e GPG_PASSPHRASE="${{ secrets.GPG_PASSPHRASE }}" \
+            -e GPG_IMPORT="${{ secrets.GPG_PRIVATE_KEY }}" \
+            -e GPG_KEY="${{ vars.GPG_KEY_ID }}" \
             -v $GITHUB_WORKSPACE/packages-built:/workspace/packages \
             -v $GITHUB_WORKSPACE/ci:/workspace/ci:ro \
             lfdevs/archlinuxarm:base-devel sleep infinity
-          docker cp /tmp/ssh-deploy-key deployer:/tmp/ssh_key || true
-          docker exec deployer mkdir -p /root/.ssh || true
-          docker cp ~/.ssh/known_hosts deployer:/root/.ssh/known_hosts || true
 
       - name: Deploy all packages
         run: |
-          docker exec deployer bash -lc "cd /workspace && for p in packages/*; do if [ -d \"$p\" ]; then echo Deploying $p; ci/deploy-package.sh \"$p\" || true; fi; done"
+          docker exec deployer bash -lc "
+            pacman -Sy --noconfirm github-cli 2>/dev/null || true
+            cd /workspace && bash ci/deploy-package.sh
+          "
 
       - name: Stop deploy container
         if: always()

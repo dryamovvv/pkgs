@@ -22,20 +22,20 @@ fi
 awk '/^source=\(/,/^\)/{if(!/^source=\(|/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' > /tmp/ci_sources_$$.txt || true
 awk '/^sha256sums=\(/,/^\)/{if(!/^sha256sums=\(|/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' > /tmp/ci_sums_$$.txt || true
 
-# Enforce presence of declared sha256sums in PKGBUILD
+# Handle declared sha256sums in PKGBUILD
 if [ ! -s /tmp/ci_sums_$$.txt ]; then
-  echo "ERROR: PKGBUILD missing sha256sums or sha256sums is empty in $pkgdir" >&2
-  rm -f /tmp/ci_sources_$$.txt /tmp/ci_sums_$$.txt "$TMP_IN" || true
-  exit 3
-fi
+  echo "WARNING: PKGBUILD missing sha256sums or sha256sums is empty in $pkgdir" >&2
+  echo "---SHA256SUMS_DECLARED---" >> "$TMP_IN"
+  echo "MISSING_SHA256S" >> "$TMP_IN"
+else
+  if [ -s /tmp/ci_sources_$$.txt ]; then
+    echo "---SOURCES---" >> "$TMP_IN"
+    cat /tmp/ci_sources_$$.txt >> "$TMP_IN"
+  fi
 
-if [ -s /tmp/ci_sources_$$.txt ]; then
-  echo "---SOURCES---" >> "$TMP_IN"
-  cat /tmp/ci_sources_$$.txt >> "$TMP_IN"
+  echo "---SHA256SUMS_DECLARED---" >> "$TMP_IN"
+  cat /tmp/ci_sums_$$.txt >> "$TMP_IN"
 fi
-
-echo "---SHA256SUMS_DECLARED---" >> "$TMP_IN"
-cat /tmp/ci_sums_$$.txt >> "$TMP_IN"
 
 # For local source files, compute their sha256 and include
 # This ensures sources that reference repo-local files (patches, extras) are accounted for

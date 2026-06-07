@@ -1,0 +1,46 @@
+# Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
+# Contributor: dryamovvv (Arch Linux package)
+# Optimized for Raspberry Pi 5 (Cortex-A76)
+pkgname=just-lsp
+pkgver=0.4.5
+pkgrel=1
+pkgdesc="A language server for just, optimized for Raspberry Pi 5 (Cortex-A76)"
+arch=('aarch64')
+url="https://github.com/terror/just-lsp"
+license=('CC0-1.0')
+options=('!debug')
+depends=(
+  'gcc-libs'
+  'glibc'
+)
+makedepends=(
+  'cargo'
+)
+source=("https://github.com/terror/just-lsp/archive/refs/tags/0.4.5.tar.gz")
+sha256sums=('1382005fc761f9522719dff06226d7841614995b497cc0f21dfcb2664958003b')
+
+prepare() {
+  cd "$srcdir/just-lsp-0.4.5"
+  cargo fetch --locked
+}
+
+build() {
+  cd "$srcdir/just-lsp-0.4.5"
+  export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export LDFLAGS="-Wl,-z,max-page-size=0x4000"
+  export RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"
+  cargo build --release --locked
+}
+
+check() {
+  cd "$srcdir/just-lsp-0.4.5"
+  cargo test --workspace --all-targets --all-features || true
+}
+
+package() {
+  cd "$srcdir/just-lsp-0.4.5"
+  install -Dm755 "target/release/just-lsp" "$pkgdir/usr/bin/just-lsp"
+  install -Dm644 "README.md" "$pkgdir/usr/share/doc/just-lsp/README.md"
+  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/just-lsp/LICENSE"
+}

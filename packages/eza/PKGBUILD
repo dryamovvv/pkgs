@@ -1,0 +1,46 @@
+# Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
+# Contributor: dryamovvv (Arch Linux package)
+# Optimized for Raspberry Pi 5 (Cortex-A76)
+pkgname=eza
+pkgver=0.23.4
+pkgrel=1
+pkgdesc="A modern, maintained replacement for ls, optimized for Raspberry Pi 5 (Cortex-A76)"
+arch=('aarch64')
+url="https://github.com/eza-community/eza"
+license=('EUPL-1.2')
+options=('!debug')
+depends=(
+  'gcc-libs'
+  'glibc'
+)
+makedepends=(
+  'cargo'
+)
+source=("https://github.com/eza-community/eza/archive/refs/tags/v0.23.4.tar.gz")
+sha256sums=('9fbcad518b8a2095206ac385329ca62d216bf9fdc652dde2d082fcb37c309635')
+
+prepare() {
+  cd "$srcdir/eza-0.23.4"
+  cargo fetch --locked
+}
+
+build() {
+  cd "$srcdir/eza-0.23.4"
+  export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export LDFLAGS="-Wl,-z,max-page-size=0x4000"
+  export RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"
+  cargo build --release --locked --features git,vendored-openssl,vendored-libgit2
+}
+
+check() {
+  cd "$srcdir/eza-0.23.4"
+  cargo test --workspace --all-targets || true
+}
+
+package() {
+  cd "$srcdir/eza-0.23.4"
+  install -Dm755 "target/release/eza" "$pkgdir/usr/bin/eza"
+  install -Dm644 "README.md" "$pkgdir/usr/share/doc/eza/README.md"
+  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/eza/LICENSE"
+}

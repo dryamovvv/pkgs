@@ -1,0 +1,51 @@
+name: Auto-add sha256sums
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_prs:
+        description: "Max packages to process"
+        required: false
+        default: '5'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  run-auto-add:
+    name: Run auto-add sha256sums in Arch container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run auto-add inside Arch container
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAX_PRS: ${{ github.event.inputs.max_prs }}
+        run: |
+          set -eux
+          docker pull lfdevs/archlinuxarm:base-devel
+
+          # Run the auto-add script inside the Arch container so updpkgsums and pacman are available
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE":/workspace \
+            -w /workspace \
+            -e GH_TOKEN \
+            -e MAX_PRS \
+            lfdevs/archlinuxarm:base-devel bash -lc "\
+              pacman -Sy --noconfirm updpkgsums git curl ca-certificates openssl github-cli || true && \
+              git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/$GITHUB_REPOSITORY.git && \
+              echo \"${GH_TOKEN}\" | gh auth login --with-token || true && \
+              /workspace/ci/auto-add-sha256sums.sh ${MAX_PRS:-5} ci/add-shasums 'CI Bot <ci-bot@example.com>'\
+            "
+
+      - name: Upload auto-add log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-add-log
+          path: /tmp/auto-add-shasums.log
+          if-no-files-found: ignore

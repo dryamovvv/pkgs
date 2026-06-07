@@ -48,4 +48,6 @@ package() {
   install -Dm644 "$srcdir/arch-opsd.service" "$pkgdir/etc/systemd/system/arch-opsd.service"
   install -Dm644 LICENSE-MIT "$pkgdir/usr/share/licenses/$pkgname/LICENSE-MIT"
   install -Dm644 LICENSE-GPL "$pkgdir/usr/share/licenses/$pkgname/LICENSE-GPL"
-}# dry-run auto-fix test Вс 07 июн 2026 15:23:00 MSK
+}
+# dry-run auto-fix test appended by CI dry-run
+

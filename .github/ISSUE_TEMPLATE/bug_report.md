@@ -1,38 +1,43 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
-
+about: Report a broken or misbehaving package
+title: "[BUG] "
+labels: bug
+assignees: ""
 ---
 
+**Package name**
+Which package is affected? (e.g. `helix`, `zellij`)
+
+**Package version**
+Version installed or attempted.
+
 **Describe the bug**
-A clear and concise description of what the bug is.
+What went wrong? Build failure, runtime crash, missing dependency, wrong optimization flags, etc.
 
 **To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+Steps to reproduce:
+
+1. `sudo pacman -S <package>`
+2. Run command / configure / use ...
+3. Observe error
 
 **Expected behavior**
-A clear and concise description of what you expected to happen.
+What should have happened instead.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**Environment**
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+- Device: Raspberry Pi 5
+- OS: [e.g. Arch Linux ARM]
+- Kernel: [e.g. 6.12.x]
+- pacman version: [e.g. 7.0]
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+**Log output**
+Paste relevant build or runtime logs, or link to a failed CI run.
+
+```
+(paste logs here)
+```
 
 **Additional context**
-Add any other context about the problem here.
+Any other context (workarounds tried, related upstream issues, etc.).

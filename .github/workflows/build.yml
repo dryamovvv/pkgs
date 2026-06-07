@@ -52,6 +52,7 @@ jobs:
         run: |
           chmod +x ci/compute-build-hash.sh
           BUILD_HASH=$(ci/compute-build-hash.sh packages/${{ matrix.pkg }})
+          echo "Computed build_hash=$BUILD_HASH"
           echo "build_hash=$BUILD_HASH" >> $GITHUB_OUTPUT
 
       - name: Restore built package cache
@@ -60,6 +61,11 @@ jobs:
         with:
           path: /tmp/build-cache/${{ matrix.pkg }}
           key: build-artifact-${{ matrix.pkg }}-${{ steps.compute-hash.outputs.build_hash }}
+
+      - name: Show build cache info
+        run: |
+          echo "build_cache_key=build-artifact-${{ matrix.pkg }}-${{ steps.compute-hash.outputs.build_hash }}"
+          echo "built_cache_hit=${{ steps.built-cache.outputs.cache-hit }}"
 
       - name: Use cached build artifact
         if: steps.built-cache.outputs.cache-hit == 'true'
@@ -74,6 +80,11 @@ jobs:
         with:
           path: /tmp/docker-image.tar
           key: docker-archlinuxarm-v2-${{ hashFiles('.github/workflows/build.yml') }}
+
+      - name: Show docker cache info
+        run: |
+          echo "docker_cache_key=docker-archlinuxarm-v2-${{ hashFiles('.github/workflows/build.yml') }}"
+          echo "docker_cache_hit=${{ steps.docker-cache.outputs.cache-hit }}"
 
       - name: Pull Docker image
         if: steps.docker-cache.outputs.cache-hit != 'true'
@@ -95,11 +106,17 @@ jobs:
 
       # ── ccache ──
       - name: Cache ccache
+        id: ccache-cache
         uses: actions/cache@v5
         with:
           path: /tmp/ccache
           key: ccache-v2-${{ matrix.pkg }}-${{ hashFiles(format('packages/{0}/PKGBUILD', matrix.pkg)) }}
           restore-keys: ccache-v2-${{ matrix.pkg }}-
+
+      - name: Show ccache info
+        run: |
+          echo "ccache_key=ccache-v2-${{ matrix.pkg }}-${{ hashFiles(format('packages/{0}/PKGBUILD', matrix.pkg)) }}"
+          echo "ccache_hit=${{ steps.ccache-cache.outputs.cache-hit }}"
 
       # ── Cargo cache (Rust) ──
       - name: Cache Cargo
@@ -127,6 +144,8 @@ jobs:
             -v $GITHUB_WORKSPACE/ci:/workspace/ci:ro \
             lfdevs/archlinuxarm:base-devel sleep infinity
           # Mount only the package directory and ci scripts into the container to avoid copying the whole repo
+          # Ensure updpkgsums is available inside the container to allow automated checksum updates
+          docker exec builder pacman -Sy --noconfirm updpkgsums || true
           docker exec \
             -e GPG_KEY="${{ vars.GPG_KEY_ID }}" \
             -e GPG_IMPORT="${{ secrets.GPG_PRIVATE_KEY }}" \
@@ -188,6 +207,20 @@ jobs:
         with:
           path: packages-built
 
+      - name: Install GitHub CLI
+        run: |
+          set -eux
+          if command -v gh >/dev/null 2>&1; then
+            echo "gh already installed"
+          else
+            # Install official GitHub CLI on ubuntu-latest
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg >/dev/null 2>&1 || true
+            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg || true
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt update -y
+            sudo apt install -y gh || true
+          fi
+
       - name: Validate SSH and GPG secrets
         run: |
           : "${SSH_HOST:?ERROR: SSH_HOST secret not set}"
@@ -219,6 +252,13 @@ jobs:
           docker pull lfdevs/archlinuxarm:base-devel
           docker rm -f deployer 2>/dev/null || true
           docker run -d --name deployer \
+            -e SSH_HOST='${{ secrets.SSH_HOST }}' \
+            -e SSH_PORT='${{ secrets.SSH_PORT }}' \
+            -e SSH_USER='${{ secrets.SSH_USER }}' \
+            -e REPO_PATH='${{ secrets.SSH_REPO_PATH }}' \
+            -e GPG_PASSPHRASE='${{ secrets.GPG_PASSPHRASE }}' \
+            -e GPG_IMPORT='${{ secrets.GPG_PRIVATE_KEY }}' \
+            -e GPG_KEY='${{ vars.GPG_KEY_ID }}' \
             -v $GITHUB_WORKSPACE/packages-built:/workspace/packages \
             -v $GITHUB_WORKSPACE/ci:/workspace/ci:ro \
             lfdevs/archlinuxarm:base-devel sleep infinity

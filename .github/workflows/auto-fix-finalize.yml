@@ -1,0 +1,89 @@
+name: auto-fix finalize
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  issues: write
+  actions: read
+
+jobs:
+  finalize-auto-fix:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'auto-fix/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up GH CLI auth
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Wait for build success (poll)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          ISSUE_NUM: |
+            ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MERGE_SHA}" ] || [ "${MERGE_SHA}" = "null" ]; then
+            echo "No merge commit SHA available; exiting"
+            exit 0
+          fi
+
+          echo "Waiting for "Build and Deploy" workflow run for commit ${MERGE_SHA} to complete with success..."
+
+          attempts=60
+          wait_seconds=30
+          last_status=""
+          for i in $(seq 1 $attempts); do
+            runs_json=$(gh api repos/${REPO}/actions/runs --jq ".workflow_runs[] | select(.head_sha==\"${MERGE_SHA}\" and .name==\"Build and Deploy\") | {id: .id, status: .status, conclusion: .conclusion, html_url: .html_url}" ) || true
+            if [ -n "$runs_json" ]; then
+              conclusion=$(echo "$runs_json" | jq -r '.conclusion' 2>/dev/null || true)
+              status=$(echo "$runs_json" | jq -r '.status' 2>/dev/null || true)
+              url=$(echo "$runs_json" | jq -r '.html_url' 2>/dev/null || true)
+              echo "Found run: status=$status, conclusion=$conclusion, url=$url"
+              if [ "$status" = "completed" ] && [ "$conclusion" = "success" ]; then
+                echo "Build succeeded"
+                BUILD_OK=1
+                break
+              elif [ "$status" = "completed" ] && [ "$conclusion" != "success" ]; then
+                echo "Build completed but not successful"
+                BUILD_OK=0
+                break
+              fi
+            else
+              echo "No matching workflow run yet (attempt $i/$attempts)."
+            fi
+            sleep $wait_seconds
+          done
+
+          if [ "${BUILD_OK:-0}" = "1" ]; then
+            # Find referenced issue number from PR body or branch name
+            PR_BODY='${{ github.event.pull_request.body }}'
+            ISSUE_FROM_BODY=$(printf "%s" "$PR_BODY" | grep -oE '[Ii]ssue[:# ]*[0-9]+' | grep -oE '[0-9]+' | head -1 || true)
+            if [ -n "$ISSUE_FROM_BODY" ]; then
+              ISSUE_NUM=$ISSUE_FROM_BODY
+            else
+              # try branch name pattern auto-fix/issue-<n>
+              BRANCH=${{ github.event.pull_request.head.ref }}
+              ISSUE_NUM=$(printf "%s" "$BRANCH" | sed -n 's/.*issue-\([0-9]\+\).*/\1/p' || true)
+            fi
+
+            if [ -n "$ISSUE_NUM" ]; then
+              echo "Closing issue #$ISSUE_NUM because PR merged and CI succeeded"
+              gh issue close $ISSUE_NUM --repo ${REPO} --comment "Auto-fix PR merged and CI succeeded; closing this issue." || true
+            else
+              echo "No issue number found; nothing to close"
+            fi
+          else
+            echo "Build did not succeed; leaving issue open and posting a comment."
+            PR_NUM=${{ github.event.pull_request.number }}
+            gh issue comment ${{ github.event.pull_request.number }} --repo ${REPO} --body "Auto-fix PR was merged but CI did not pass. Please investigate: $(gh pr view ${PR_NUM} --repo ${REPO} --json url -q '.url')" || true
+          fi

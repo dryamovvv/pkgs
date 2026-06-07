@@ -54,7 +54,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: true
+          use_github_token: false
           prompt: ${{ github.event.issue.body || github.event.comment.body }}
 
   auto-fix:
@@ -89,7 +89,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: true
+          use_github_token: false
           prompt: |
             The CI build for one or more packages has failed.
 

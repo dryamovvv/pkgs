@@ -219,6 +219,13 @@ jobs:
           docker pull lfdevs/archlinuxarm:base-devel
           docker rm -f deployer 2>/dev/null || true
           docker run -d --name deployer \
+            -e SSH_HOST='${{ secrets.SSH_HOST }}' \
+            -e SSH_PORT='${{ secrets.SSH_PORT }}' \
+            -e SSH_USER='${{ secrets.SSH_USER }}' \
+            -e REPO_PATH='${{ secrets.SSH_REPO_PATH }}' \
+            -e GPG_PASSPHRASE='${{ secrets.GPG_PASSPHRASE }}' \
+            -e GPG_IMPORT='${{ secrets.GPG_PRIVATE_KEY }}' \
+            -e GPG_KEY='${{ vars.GPG_KEY_ID }}' \
             -v $GITHUB_WORKSPACE/packages-built:/workspace/packages \
             -v $GITHUB_WORKSPACE/ci:/workspace/ci:ro \
             lfdevs/archlinuxarm:base-devel sleep infinity

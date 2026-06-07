@@ -16,8 +16,9 @@ if [ -z "${SSH_KEY:-}" ] || [ ! -f "$SSH_KEY" ]; then
 fi
 chmod 600 "$SSH_KEY"
 
+# Configure SSH options and a safe SCP command wrapper
 SSH_OPTS="-i $SSH_KEY -o ConnectTimeout=10 -o Port=$SSH_PORT"
-SCP_OPTS="-O $SSH_OPTS"
+SCP_CMD="scp -i $SSH_KEY -P ${SSH_PORT:-22} -o ConnectTimeout=10"
 REMOTE="$SSH_USER@$SSH_HOST"
 
 GPG_KEY="${GPG_KEY:-}"
@@ -60,7 +61,8 @@ fi
 
 echo "=== Deploying $PKGNAME ==="
 
-for attempt in $(seq 1 30); do
+ATTEMPTS=30
+for attempt in $(seq 1 $ATTEMPTS); do
 	echo "=== Deploy attempt $attempt/30 ==="
 
 	WORKDIR=$(mktemp -d /tmp/repo-work-XXXXXX)
@@ -80,14 +82,14 @@ for attempt in $(seq 1 30); do
 		exit 0
 	fi
 
-	if ! scp $SCP_OPTS "$PKGFILE" "$REMOTE:$STAGING/" 2>&1; then
+	if ! $SCP_CMD "$PKGFILE" "$REMOTE:$STAGING/" 2>&1; then
 		echo "SCP package failed, retrying..."
 		sleep $((3 + attempt*2 + (RANDOM % 5)))
 		rm -rf "$WORKDIR"
 		continue
 	fi
 	if [ -n "$PKG_SIG" ]; then
-		scp $SCP_OPTS "$PKG_SIG" "$REMOTE:$STAGING/" 2>/dev/null || true
+		$SCP_CMD "$PKG_SIG" "$REMOTE:$STAGING/" 2>/dev/null || true
 	fi
 
 	DB_EXISTS=$(
@@ -110,14 +112,14 @@ for attempt in $(seq 1 30); do
 	}
 
 	if [ "$DB_EXISTS" = "YES" ]; then
-		if ! scp $SCP_OPTS "$REMOTE:$STAGING/db_current.tar.gz" "$WORKDIR/repo.db.tar.gz"; then
+		if ! $SCP_CMD "$REMOTE:$STAGING/db_current.tar.gz" "$WORKDIR/repo.db.tar.gz"; then
 			echo "Failed to download repo DB, retrying..."
 			sleep $((3 + attempt*2 + (RANDOM % 5)))
 			rm -rf "$WORKDIR"
 			continue
 		fi
 		DB_MD5=$(md5sum "$WORKDIR/repo.db.tar.gz" | cut -d' ' -f1)
-		scp $SCP_OPTS "$REMOTE:$STAGING/db_current.tar.gz.sig" "$WORKDIR/repo.db.tar.gz.sig" 2>/dev/null || true
+		$SCP_CMD "$REMOTE:$STAGING/db_current.tar.gz.sig" "$WORKDIR/repo.db.tar.gz.sig" 2>/dev/null || true
 		cp "$PKGFILE" "$WORKDIR/"
 		[ -n "$PKG_SIG" ] && cp "$PKG_SIG" "$WORKDIR/"
 
@@ -175,18 +177,18 @@ for attempt in $(seq 1 30); do
 		printf '</pre>\n</body>\n</html>\n'
 	} >"$WORKDIR/index.html"
 
-	if ! scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_new.tar.gz"; then
+	if ! $SCP_CMD "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_new.tar.gz"; then
 		echo "SCP db_new failed, retrying..."
 		sleep $((3 + attempt*2 + (RANDOM % 5)))
 		rm -rf "$WORKDIR"
 		continue
 	fi
-	scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz.sig" "$REMOTE:$STAGING/db_new.tar.gz.sig" 2>/dev/null || true
-	scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz.old" "$REMOTE:$STAGING/db_old.tar.gz" 2>/dev/null || true
-	scp $SCP_OPTS "$WORKDIR/repo.files.tar.gz" "$REMOTE:$STAGING/db_files.tar.gz" 2>/dev/null || true
-	scp $SCP_OPTS "$WORKDIR/repo.files.tar.gz.old" "$REMOTE:$STAGING/db_files_old.tar.gz" 2>/dev/null || true
-	scp $SCP_OPTS "$WORKDIR/repo.files.tar.gz.sig" "$REMOTE:$STAGING/db_files.tar.gz.sig" 2>/dev/null || true
-	scp $SCP_OPTS "$WORKDIR/index.html" "$REMOTE:$STAGING/" 2>/dev/null || true
+$SCP_CMD "$WORKDIR/repo.db.tar.gz.sig" "$REMOTE:$STAGING/db_new.tar.gz.sig" 2>/dev/null || true
+$SCP_CMD "$WORKDIR/repo.db.tar.gz.old" "$REMOTE:$STAGING/db_old.tar.gz" 2>/dev/null || true
+$SCP_CMD "$WORKDIR/repo.files.tar.gz" "$REMOTE:$STAGING/db_files.tar.gz" 2>/dev/null || true
+$SCP_CMD "$WORKDIR/repo.files.tar.gz.old" "$REMOTE:$STAGING/db_files_old.tar.gz" 2>/dev/null || true
+$SCP_CMD "$WORKDIR/repo.files.tar.gz.sig" "$REMOTE:$STAGING/db_files.tar.gz.sig" 2>/dev/null || true
+$SCP_CMD "$WORKDIR/index.html" "$REMOTE:$STAGING/" 2>/dev/null || true
 
 	DEPLOY_RESULT=$(
 		ssh $SSH_OPTS "$REMOTE" bash -s -- "$REPO_PATH" "$STAGING" "$LOCKFILE" "$DB_MD5" <<'SSH_SCRIPT'
@@ -250,5 +252,5 @@ SSH_SCRIPT
 	fi
 done
 
-echo "ERROR: Deploy failed after 10 attempts"
+echo "ERROR: Deploy failed after $ATTEMPTS attempts"
 exit 1

@@ -140,6 +140,11 @@ EXPECTED_MD5="$4"
     fi
   fi
 
+  if [ ! -f "$STAGING/db_new.tar.gz" ]; then
+    echo "CONFLICT"
+    exit 0
+  fi
+
   mv "$STAGING"/*.pkg.tar.* "$REPO_PATH/" 2>/dev/null || true
   mv "$STAGING"/db_new.tar.gz       "$REPO_PATH/repo.db.tar.gz"
   mv "$STAGING"/db_old.tar.gz       "$REPO_PATH/repo.db.tar.gz.old"  2>/dev/null || true

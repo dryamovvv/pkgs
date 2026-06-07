@@ -112,3 +112,6 @@ jobs:
             MSG="Auto-fix attempt ${{ inputs.attempt }}/3 failed. Manual intervention may be needed."
           fi
           gh issue comment ${{ inputs.issue-number }} --repo ${{ github.repository }} --body "${EMOJI} **${MSG}**" || true
+          if [ "${{ job.status }}" = "success" ]; then
+            gh issue close ${{ inputs.issue-number }} --repo ${{ github.repository }} --comment "Auto-fix applied and pushed. Closing — rebuild will verify." || true
+          fi

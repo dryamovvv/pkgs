@@ -142,6 +142,40 @@ jobs:
 
             Do NOT wait for CI. The auto-merge workflow will merge after CI passes.
 
+      - name: Run opencode (remove-package)
+        if: |
+          github.event_name == 'issues' &&
+          contains(github.event.issue.labels.*.name, 'remove-package')
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        with:
+          model: opencode/deepseek-v4-flash-free
+          share: true
+          use_github_token: false
+          prompt: |
+            A package removal request was opened:
+
+            **Issue:** ${{ github.event.issue.title }}
+            **Body:**
+            ${{ github.event.issue.body }}
+
+            ## Your task
+
+            1. **Extract package name** from the issue title/body — must be an EXISTING package in `packages/`.
+            2. **Create branch:** `remove-package/{pkg-name}` from main.
+            3. **Remove** the entire `packages/{pkg-name}/` directory.
+            4. **Remove** the package entry from `AGENTS.md` and `README.md` package tables.
+            5. **Commit** with message: `chore: remove {pkg-name}`
+            6. **Push** the branch.
+            7. **Open PR** against main.
+            8. **Comment on issue** with PR link.
+
+            Do NOT wait for CI. The auto-merge workflow will merge after CI passes.
+
       - name: Run opencode (new-package comment)
         if: |
           github.event_name == 'issue_comment' &&
@@ -214,7 +248,7 @@ jobs:
       - name: Run opencode (default)
         if: |
           steps.mode.outputs.mode == 'unknown' ||
-          (github.event_name == 'issues' && !contains(github.event.issue.labels.*.name, 'new-package') && !contains(github.event.issue.labels.*.name, 'modify-package'))
+          (github.event_name == 'issues' && !contains(github.event.issue.labels.*.name, 'new-package') && !contains(github.event.issue.labels.*.name, 'modify-package') && !contains(github.event.issue.labels.*.name, 'remove-package'))
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}

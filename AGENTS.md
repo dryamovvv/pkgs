@@ -108,29 +108,30 @@ GitHub Pages: Source = **Deploy from a branch** → `gh-pages`. Не "GitHub Act
 
 ## Пакеты
 
-| Пакет      | Описание                                     | Версия  |
-| ---------- | -------------------------------------------- | ------- |
-| arch-opsd  | systemd service manager                      | latest  |
-| atuin      | Shell history with sync                      | latest  |
-| bat        | cat(1) clone with wings                      | 0.26.1  |
-| delta      | Syntax-highlighting pager for git            | 0.19.2  |
-| dust       | More intuitive version of du                 | 1.2.4   |
-| dysk       | ls-like command for disks                    | 3.6.1   |
-| erd        | Modern filesystem and disk-usage utility     | 3.1.2   |
-| eza        | Modern maintained replacement for ls         | 0.23.4  |
-| fd         | Simple, fast alternative to find             | 10.4.2  |
-| grex       | Command-line tool for generating regex       | 1.4.6   |
-| helix      | Modal terminal-based text editor             | latest  |
-| hyperfine  | Command-line benchmarking tool               | 1.20.0  |
-| just       | Command runner                               | 1.51.0  |
-| just-lsp   | Language server for just                     | 0.4.5   |
-| kmscon     | KMS/DRM-based virtual console                | latest  |
-| marksman   | Markdown LSP server                          | latest  |
-| mdv        | Browser-quality Markdown viewer for terminal | 0.1.1   |
-| mozillavpn | Fast, secure VPN by Mozilla                  | latest  |
-| procs      | Modern replacement for ps                    | 0.14.11 |
-| ripgrep    | Fast grep replacement (binary: rg)           | 15.1.0  |
-| starship   | Minimal, blazing-fast prompt for any shell   | 1.25.1  |
-| taplo      | TOML toolkit                                 | 0.10.0  |
-| zellij     | Terminal workspace with batteries included   | 0.44.3  |
-| zoxide     | Smarter cd command                           | 0.9.9   |
+| Пакет         | Описание                                               | Версия  |
+| ------------- | ------------------------------------------------------ | ------- |
+| arch-opsd     | systemd service manager                                | latest  |
+| atuin         | Shell history with sync                                | latest  |
+| bat           | cat(1) clone with wings                                | 0.26.1  |
+| delta         | Syntax-highlighting pager for git                      | 0.19.2  |
+| dust          | More intuitive version of du                           | 1.2.4   |
+| dysk          | ls-like command for disks                              | 3.6.1   |
+| erd           | Modern filesystem and disk-usage utility               | 3.1.2   |
+| eza           | Modern maintained replacement for ls                   | 0.23.4  |
+| fd            | Simple, fast alternative to find                       | 10.4.2  |
+| grex          | Command-line tool for generating regex                 | 1.4.6   |
+| helix         | Modal terminal-based text editor                       | latest  |
+| hyperfine     | Command-line benchmarking tool                         | 1.20.0  |
+| just          | Command runner                                         | 1.51.0  |
+| just-lsp      | Language server for just                               | 0.4.5   |
+| kmscon        | KMS/DRM-based virtual console                          | latest  |
+| linux-rpi-16k | Raspberry Pi 5 kernel (16K pages, RPi Foundation fork) | 6.18.34 |
+| marksman      | Markdown LSP server                                    | latest  |
+| mdv           | Browser-quality Markdown viewer for terminal           | 0.1.1   |
+| mozillavpn    | Fast, secure VPN by Mozilla                            | latest  |
+| procs         | Modern replacement for ps                              | 0.14.11 |
+| ripgrep       | Fast grep replacement (binary: rg)                     | 15.1.0  |
+| starship      | Minimal, blazing-fast prompt for any shell             | 1.25.1  |
+| taplo         | TOML toolkit                                           | 0.10.0  |
+| zellij        | Terminal workspace with batteries included             | 0.44.3  |
+| zoxide        | Smarter cd command                                     | 0.9.9   |

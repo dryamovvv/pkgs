@@ -20,11 +20,15 @@ pkgs/
 │   │   └── PKGBUILD
 │   └── ...
 ├── ci/
-│   ├── build-package.sh   # Сборка в контейнере (pacman-key, ccache, makepkg)
-│   ├── deploy-package.sh   # Деплой через SSH/SCP с flock-блокировкой
-│   └── detect-changes.sh  # Детект изменённых пакетов
+│   ├── build-package.sh      # Сборка в контейнере (pacman-key, ccache, makepkg)
+│   ├── deploy-package.sh     # Деплой через SSH/SCP с flock-блокировкой
+│   ├── detect-changes.sh     # Детект изменённых пакетов
+│   ├── compute-build-hash.sh # Детерминированный хэш сборки (PKGBUILD + sources + CI)
+│   ├── run-compute-hash.sh   # Обёртка с fallback и санитизацией для cache keys
+│   └── auto-add-sha256sums.sh # Автообновление sha256sums в PKGBUILD'ах
 ├── .github/workflows/
-│   └── build.yml          # CI: detect → build matrix + deploy
+│   ├── build.yml             # CI: detect → build matrix + deploy
+│   └── auto-add-shasums.yml  # Автоматическое обновление sha256sums (workflow_dispatch)
 ├── .opencode/skills/
 │   └── add-package/SKILL.md  # Интерактивный навык добавления пакетов
 ├── .gitignore
@@ -58,10 +62,16 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
 
 1. **detect** — `git diff --name-only HEAD~1 -- packages/`, формирует matrix пакетов (на ubuntu-latest)
 2. **build** — matrix job на `ubuntu-24.04-arm`:
-   - Docker `lfdevs/archlinuxarm:base-devel` + `docker cp` (артефакты видны на хосте)
-   - Кэши: Docker image, pacman, ccache (по PKGBUILD hash), Cargo (по PKGBUILD hash)
+   - Вычисление детерминированного build-hash (`ci/compute-build-hash.sh`):
+     PKGBUILD + sha256sums + локальные source-файлы + `ci/build-package.sh`
+   - Кэш built-artifact: `build-artifact-{pkg}-{hash}` — пропускает сборку при cache-hit
+   - Кэши: Docker image, pacman, ccache (по build-hash), Cargo (по build-hash)
+   - Кэш-директории создаются заранее, чтобы избежать warning'ов при cache-hit
+   - В built-cache попадают только `.pkg.tar.*` / `.sig` файлы (не вся `src/` / `pkg/`)
    - Сборка `makepkg -s --noconfirm` с RPi5 CFLAGS/CXXFLAGS/LDFLAGS + ccache
-   - Деплой: `deploy-package.sh` внутри контейнера → SCP + flock атомарный деплой на удалённый сервер с retry-loop
+3. **deploy** — отдельная job на `ubuntu-24.04-arm`:
+   - Скачивает все артефакты, деплоит через Docker-контейнер
+   - `ci/deploy-package.sh`: SCP + flock атомарный деплой с retry-loop (30 попыток)
 
 Особенности:
 
@@ -71,11 +81,24 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
 - `concurrency: deploy-${{ github.ref }}` — сериализует деплой, но не отменяет
 - `fail-fast: false` — один упавший пакет не отменяет остальные
 - tmate-отладка через `workflow_dispatch` с `debug_enabled: true`
+- `force_rebuild_all` (workflow_dispatch) — принудительная пересборка всех пакетов с инвалидацией кэша
 - Деплой через SCP + flock на удалённый сервер с детекцией конфликтов
+
+### Build Hash (compute-build-hash.sh)
+
+Детерминированный хэш для инвалидации кэша. Включает:
+- Содержимое PKGBUILD
+- Source-файлы и их URL'ы (из массива `source=()`)
+- Локальные source-файлы (sha256sum)
+- SHA256-суммы (из массива `sha256sums=()`)
+- Все файлы в директории пакета (sha256sum, алфавитный порядок)
+- `ci/build-package.sh` (изменения скрипта сборки инвалидируют кэш)
+
+При `force_rebuild_all` в хэш добавляется timestamp → гарантированный cache-miss.
 
 ## deploy-package.sh
 
-Retry-based (10 попыток) деплой внутри arch-контейнера:
+Retry-based (30 попыток) деплой внутри arch-контейнера:
 
 1. SCP пакета в staging-директорию на роутере
 2. Скачивает текущую базу repo.db с роутера (под flock)

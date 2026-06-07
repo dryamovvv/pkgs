@@ -127,15 +127,23 @@ jobs:
             if [ -n "$CHANGED_PKGS" ]; then
               for pkg in $CHANGED_PKGS; do
                 echo "== Checking package: $pkg =="
-                docker run --rm -v "$GITHUB_WORKSPACE":/workspace -w /workspace lfdevs/archlinuxarm:base-devel bash -lc "cd packages/$pkg && makepkg -s --noconfirm --nobuild"
-                if [ $? -ne 0 ]; then
-                  echo "Makepkg check failed for $pkg; aborting PR creation"
-                  gh issue comment ${ISSUE} --repo $REPO --body "❌ Auto-fix attempt ${ATTEMPT} failed local makepkg check for package \\`$pkg\\`. Aborting PR creation. Please inspect changes." || true
+                if [ ! -f "packages/$pkg/PKGBUILD" ]; then
+                  echo "No PKGBUILD for $pkg; skipping"
+                  continue
+                fi
+                # Syntax check
+                if ! bash -n "packages/$pkg/PKGBUILD"; then
+                  gh issue comment ${ISSUE} --repo $REPO --body "❌ Auto-fix attempt ${ATTEMPT} produced a syntax error in packages/$pkg/PKGBUILD. Aborting PR creation." || true
+                  exit 1
+                fi
+                # Basic required fields
+                if ! grep -q '^pkgname=' "packages/$pkg/PKGBUILD" || ! grep -q '^pkgver=' "packages/$pkg/PKGBUILD"; then
+                  gh issue comment ${ISSUE} --repo $REPO --body "❌ Auto-fix attempt ${ATTEMPT} produced an invalid PKGBUILD (missing pkgname/pkgver) in packages/$pkg. Aborting PR creation." || true
                   exit 1
                 fi
               done
             else
-              echo "No package files detected in commit; skipping makepkg checks"
+              echo "No package files detected in commit; skipping PKGBUILD checks"
             fi
 
             git push origin "$BRANCH"

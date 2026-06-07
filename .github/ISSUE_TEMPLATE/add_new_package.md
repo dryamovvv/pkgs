@@ -10,16 +10,19 @@ assignees: ""
 Name of the package in the AUR or upstream.
 
 **Upstream URL**
-Link to the project homepage or source repository.
+Find automatic
 
-**Why is it needed?**
-Briefly explain why this package should be included in the repo.
+**Enable all additional features**
+Yes
 
-**Build system**
-What build system does it use? (e.g. cargo, cmake, meson, autotools, make)
+**Enable tests**
+No
 
-**Optional features**
-List any optional features/dependencies you'd like enabled and why.
+**Create README.md**
+Yes
 
-**Additional context**
-Any known build issues on AArch64, patches needed, or other notes.
+**Create AGENT.md**
+Yes
+
+**Additional comments**
+No

@@ -25,7 +25,8 @@ on:
 jobs:
   opencode:
     if: |
-      github.event_name != 'workflow_dispatch'
+      github.event_name != 'workflow_dispatch' &&
+      !contains(github.event.issue.labels.*.name, 'ci-failure')
     runs-on: ubuntu-latest
     permissions:
       id-token: write

@@ -147,7 +147,7 @@ sudo pacman-key --lsign-key 0F98FE406BB366EB10AFAD8D90B35929BB827D35
 GitHub Secrets/Variables:
 - `GPG_PRIVATE_KEY` — ASCII-armored private key (secret)
 - `GPG_PASSPHRASE` — passphrase для ключа (secret)
-- `GPG_KEY_ID` — fingerprint ключа (variable: `0F98FE406BB366EB10AFAD8D90B35929BB827D35`)
+- `GPG_KEY_ID` — fingerprint ключа (secret: `0F98FE406BB366EB10AFAD8D90B35929BB827D35`)
 
 ## Пакеты
 

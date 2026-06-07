@@ -178,7 +178,7 @@ jobs:
           # Ensure updpkgsums is available inside the container to allow automated checksum updates
           docker exec builder pacman -Sy --noconfirm updpkgsums || true
           docker exec \
-            -e GPG_KEY="${{ vars.GPG_KEY_ID }}" \
+            -e GPG_KEY="${{ secrets.GPG_KEY_ID }}" \
             -e GPG_IMPORT="${{ secrets.GPG_PRIVATE_KEY }}" \
             -e GPG_PASSPHRASE="${{ secrets.GPG_PASSPHRASE }}" \
             builder bash -c "cd /workspace && ci/build-package.sh ${{ matrix.pkg }}"
@@ -263,7 +263,7 @@ jobs:
             -e GITHUB_REPOSITORY="${{ github.repository }}" \
             -e GPG_PASSPHRASE="${{ secrets.GPG_PASSPHRASE }}" \
             -e GPG_IMPORT="${{ secrets.GPG_PRIVATE_KEY }}" \
-            -e GPG_KEY="${{ vars.GPG_KEY_ID }}" \
+            -e GPG_KEY="${{ secrets.GPG_KEY_ID }}" \
             -v $GITHUB_WORKSPACE/packages-built:/workspace/packages \
             -v $GITHUB_WORKSPACE/ci:/workspace/ci:ro \
             lfdevs/archlinuxarm:base-devel sleep infinity

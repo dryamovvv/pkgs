@@ -50,10 +50,9 @@ jobs:
       - name: Compute build input hash
         id: compute-hash
         run: |
-          chmod +x ci/compute-build-hash.sh
-          BUILD_HASH=$(ci/compute-build-hash.sh packages/${{ matrix.pkg }})
-          echo "Computed build_hash=$BUILD_HASH"
-          echo "build_hash=$BUILD_HASH" >> $GITHUB_OUTPUT
+          chmod +x ci/run-compute-hash.sh ci/compute-build-hash.sh
+          ./ci/run-compute-hash.sh packages/${{ matrix.pkg }}
+          echo "build_hash=${{ steps.compute-hash.outputs.build_hash }}"
 
       - name: Restore built package cache
         id: built-cache

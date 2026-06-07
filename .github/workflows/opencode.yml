@@ -33,8 +33,9 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode-go/glm-5.1
           share: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_github_token: true
           prompt: ${{ github.event.issue.body || github.event.comment.body }}

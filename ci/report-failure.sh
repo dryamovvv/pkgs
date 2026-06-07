@@ -5,7 +5,7 @@ REPO="${1:?Usage: report-failure.sh <repo> <run_url> <commit_sha> <run_id> <pack
 RUN_URL="${2:?}"
 COMMIT_SHA="${3:?}"
 RUN_ID="${4:?}"
-PACKAGES_JSON="${5:?}"
+PACKAGES_JSON="${5:-[]}"
 
 COMMIT_SHORT="$(echo "$COMMIT_SHA" | cut -c1-7)"
 

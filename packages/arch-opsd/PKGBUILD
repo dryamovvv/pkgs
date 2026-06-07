@@ -1,0 +1,51 @@
+# Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
+# Optimized for Raspberry Pi 5 (Cortex-A76)
+pkgname=arch-opsd
+pkgver=0.1.0rc1
+pkgrel=1
+pkgdesc="MCP server for Arch Linux ecosystem — single static Rust binary"
+arch=('aarch64')
+url="https://github.com/dryamovvv/arch-mcp"
+license=('GPL3' 'MIT')
+depends=(
+  'gcc-libs'
+  'glibc'
+)
+makedepends=(
+  'cargo'
+)
+optdepends=(
+  'btrfs-progs: BTRFS monitoring and management'
+  'snapper: BTRFS snapshot management'
+  'rpi-eeprom: RPi bootloader management'
+  'pacman: package management'
+  'paru: AUR helper for package installation'
+)
+install=arch-opsd.install
+options=('!debug' '!lto')
+source=("arch-opsd-$pkgver.tar.gz::https://github.com/dryamovvv/arch-mcp/archive/refs/tags/v0.1.0-rc1.tar.gz"
+        "arch-opsd.service")
+sha256sums=('986ea203f3743dfc277a50590e7396b4a2533a429c4f28779706679e9aa57622'
+            'a5c55e3eff0a4f082a372494e1e7b0d18ddfdd7eef302625ae17b13c6127eba7')
+
+prepare() {
+  cd "$srcdir/arch-mcp-0.1.0-rc1"
+  cargo fetch --locked --target aarch64-unknown-linux-gnu
+}
+
+build() {
+  cd "$srcdir/arch-mcp-0.1.0-rc1"
+  export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export LDFLAGS="-Wl,-z,max-page-size=0x4000"
+  export RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2 -C link-arg=-Wl,-z,max-page-size=0x4000"
+  cargo build --release --locked --features http
+}
+
+package() {
+  cd "$srcdir/arch-mcp-0.1.0-rc1"
+  install -Dm755 "target/release/arch-opsd" "$pkgdir/usr/bin/arch-opsd"
+  install -Dm644 "$srcdir/arch-opsd.service" "$pkgdir/etc/systemd/system/arch-opsd.service"
+  install -Dm644 LICENSE-MIT "$pkgdir/usr/share/licenses/$pkgname/LICENSE-MIT"
+  install -Dm644 LICENSE-GPL "$pkgdir/usr/share/licenses/$pkgname/LICENSE-GPL"
+}

@@ -141,3 +141,23 @@ jobs:
       - name: Stop container
         if: always()
         run: docker rm -f builder 2>/dev/null || true
+
+  report-failure:
+    needs: [detect, build]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create or update failure issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x ci/report-failure.sh
+          ci/report-failure.sh \
+            "${{ github.repository }}" \
+            "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            "${{ github.sha }}" \
+            '${{ needs.detect.outputs.matrix }}'

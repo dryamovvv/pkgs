@@ -1,0 +1,99 @@
+#!/bin/bash
+set -euo pipefail
+
+REPO="${1:?Usage: report-failure.sh <repo> <run_url> <commit_sha> <packages_json>}"
+RUN_URL="${2:?}"
+COMMIT_SHA="${3:?}"
+PACKAGES_JSON="${4:?}"
+
+COMMIT_SHORT="$(echo "$COMMIT_SHA" | cut -c1-7)"
+
+FAILED_PKGS=""
+
+for PKG in $(echo "$PACKAGES_JSON" | jq -r '.[]'); do
+  JOBS=$(gh api "repos/${REPO}/actions/runs/current/jobs" --jq ".jobs[] | select(.name | test(\"${PKG}\")) | .conclusion" 2>/dev/null || echo "")
+  if echo "$JOBS" | grep -q "failure"; then
+    FAILED_PKGS="$FAILED_PKGS $PKG"
+  fi
+done
+
+if [ -z "$FAILED_PKGS" ]; then
+  FAILED_PKGS=$(echo "$PACKAGES_JSON" | jq -r '.[]' | tr '\n' ' ')
+fi
+
+for PKG in $FAILED_PKGS; do
+  echo "Processing failure for: $PKG"
+
+  EXISTING=$(gh issue list \
+    --repo "${REPO}" \
+    --label ci-failure \
+    --search "CI Failure: ${PKG}" \
+    --state open \
+    --json number \
+    --jq '.[0].number' 2>/dev/null || echo "")
+
+  ATTEMPT=1
+
+  if [ -n "$EXISTING" ]; then
+    echo "Found existing issue #${EXISTING} for ${PKG}"
+
+    LABELS=$(gh issue view "$EXISTING" --repo "${REPO}" --json labels --jq '.labels[].name')
+
+    for i in 1 2 3; do
+      if echo "$LABELS" | grep -q "fix-attempt-${i}"; then
+        ATTEMPT=$((i + 1))
+      fi
+    done
+
+    for old_label in fix-attempt-1 fix-attempt-2 fix-attempt-3; do
+      gh issue edit "$EXISTING" --repo "${REPO}" --remove-label "$old_label" 2>/dev/null || true
+    done
+
+    if [ "$ATTEMPT" -gt 3 ]; then
+      echo "Attempt limit reached for ${PKG}, marking as unfixable"
+      gh issue edit "$EXISTING" --repo "${REPO}" --add-label "unfixable"
+      gh issue comment "$EXISTING" --repo "${REPO}" --body "$(
+        cat <<EOF
+🚨 **Attempt limit reached** (3/3). Auto-fix is disabled for this package. Manual intervention required.
+
+Run URL: ${RUN_URL}
+Commit: ${COMMIT_SHORT}
+EOF
+      )"
+      continue
+    fi
+
+    gh issue comment "$EXISTING" --repo "${REPO}" --body "$(
+      cat <<EOF
+🔴 **Build failed again** (attempt ${ATTEMPT}/3)
+
+Run URL: ${RUN_URL}
+Commit: ${COMMIT_SHORT}
+EOF
+    )"
+  else
+    echo "No existing issue for ${PKG}, creating new one"
+    EXISTING=$(gh issue create \
+      --repo "${REPO}" \
+      --title "CI Failure: ${PKG}" \
+      --body "$(
+        cat <<EOF
+## Build Failure: \`${PKG}\`
+
+The automated build for \`${PKG}\` has failed.
+
+- **Package:** \`${PKG}\`
+- **Run URL:** ${RUN_URL}
+- **Commit:** ${COMMIT_SHORT}
+- **Attempt:** 1/3
+
+opencode will attempt to auto-fix this issue.
+EOF
+      )" \
+      --label "ci-failure" \
+      --label "fix-attempt-1" \
+      --jq '.number')
+  fi
+
+  gh issue edit "$EXISTING" --repo "${REPO}" --add-label "fix-attempt-${ATTEMPT}"
+done

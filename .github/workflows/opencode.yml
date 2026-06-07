@@ -7,6 +7,10 @@ on:
     types: [created]
   pull_request_review_comment:
     types: [created]
+  workflow_run:
+    workflows: ["Build and Deploy"]
+    types: [completed]
+    branches: [main]
 
 jobs:
   opencode:
@@ -38,3 +42,56 @@ jobs:
           share: true
           use_github_token: true
           prompt: ${{ github.event.issue.body || github.event.comment.body }}
+
+  auto-fix:
+    if: >
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      issues: write
+    concurrency:
+      group: auto-fix-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Find failure issue and prepare prompt
+        id: prepare
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x ci/auto-fix-prepare.sh
+          ci/auto-fix-prepare.sh \
+            "${{ github.repository }}" \
+            "${{ github.event.workflow_run.id }}" \
+            "${{ github.event.workflow_run.html_url }}"
+
+      - name: Run opencode auto-fix
+        if: steps.prepare.outputs.skip != 'true'
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: opencode-go/glm-5.1
+          share: true
+          use_github_token: true
+          prompt-file: /tmp/auto-fix-prompt.txt
+
+      - name: Comment on issue
+        if: steps.prepare.outputs.skip != 'true' && always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x ci/auto-fix-comment.sh
+          ci/auto-fix-comment.sh \
+            "${{ steps.prepare.outputs.issue_number }}" \
+            "${{ steps.prepare.outputs.attempt }}" \
+            "${{ github.repository }}" \
+            "${{ github.event.workflow_run.html_url }}"

@@ -123,11 +123,30 @@ jobs:
           timeout-minutes: 30
 
       # ── Deploy (inside container, SSH to remote server) ──
-      - name: Write SSH key
+      - name: Validate SSH secrets
+        run: |
+          : "${SSH_HOST:?ERROR: SSH_HOST secret not set}"
+          : "${SSH_PORT:?ERROR: SSH_PORT secret not set}"
+          : "${SSH_USER:?ERROR: SSH_USER secret not set}"
+          : "${SSH_PRIVATE_KEY:?ERROR: SSH_PRIVATE_KEY secret not set}"
+          : "${SSH_REPO_PATH:?ERROR: SSH_REPO_PATH secret not set}"
+          echo "All SSH secrets are configured"
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_REPO_PATH: ${{ secrets.SSH_REPO_PATH }}
+
+      - name: Write SSH key and host key
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/ssh-deploy-key
           chmod 600 /tmp/ssh-deploy-key
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
           docker cp /tmp/ssh-deploy-key builder:/tmp/ssh_key
+          docker exec builder mkdir -p /root/.ssh
+          docker cp ~/.ssh/known_hosts builder:/root/.ssh/known_hosts
           rm -f /tmp/ssh-deploy-key
 
       - name: Deploy to remote repository
@@ -136,6 +155,7 @@ jobs:
             -e SSH_HOST="${{ secrets.SSH_HOST }}" \
             -e SSH_PORT="${{ secrets.SSH_PORT }}" \
             -e SSH_USER="${{ secrets.SSH_USER }}" \
+            -e REPO_PATH="${{ secrets.SSH_REPO_PATH }}" \
             builder bash -c "cd /workspace && ci/deploy-package.sh packages/${{ matrix.pkg }}"
 
       # ── Artifact backup ──

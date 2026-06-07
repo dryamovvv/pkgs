@@ -2,10 +2,10 @@
 set -euo pipefail
 
 PKGDIR="$1"
-SSH_HOST="${SSH_HOST:-dryam.ru}"
-SSH_PORT="${SSH_PORT:-222}"
-SSH_USER="${SSH_USER:-root}"
-REPO_PATH="${REPO_PATH:-/tmp/mnt/e73e95d7-6854-49b0-8a0a-b0a8923ad782/aarch64}"
+SSH_HOST="${SSH_HOST:?ERROR: SSH_HOST not set}"
+SSH_PORT="${SSH_PORT:?ERROR: SSH_PORT not set}"
+SSH_USER="${SSH_USER:?ERROR: SSH_USER not set}"
+REPO_PATH="${REPO_PATH:?ERROR: REPO_PATH not set}"
 STAGING_BASE="/tmp/pkgs-staging"
 LOCKFILE="/tmp/repo.lock"
 
@@ -16,7 +16,7 @@ if [ -z "${SSH_KEY:-}" ] || [ ! -f "$SSH_KEY" ]; then
 fi
 chmod 600 "$SSH_KEY"
 
-SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o Port=$SSH_PORT"
+SSH_OPTS="-i $SSH_KEY -o ConnectTimeout=10 -o Port=$SSH_PORT"
 SCP_OPTS="-O $SSH_OPTS"
 REMOTE="$SSH_USER@$SSH_HOST"
 

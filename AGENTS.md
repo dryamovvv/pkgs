@@ -9,7 +9,7 @@
 Монорепозиторий пакетов Arch Linux aarch64, оптимизированный под Raspberry Pi 5 (Cortex-A76). Сборка — на нативных ARM64 GitHub-раннерах (`ubuntu-24.04-arm`), хостинг — удалённый сервер (`dryam.ru`).
 
 Репозиторий: `github:dryamovvv/pkgs`
-URL репозитория pacman: `http://dryam.ru/aarch64`
+URL репозитория pacman: `http://pkgs.dryam.ru/aarch64`
 
 ## Структура
 
@@ -90,7 +90,7 @@ Retry-based (10 попыток) деплой внутри arch-контейне�
 ```ini
 [custom-repo]
 SigLevel = Optional TrustedOnly
-Server = http://dryam.ru/aarch64
+Server = http://pkgs.dryam.ru/aarch64
 ```
 
 ## Добавление пакета

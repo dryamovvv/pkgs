@@ -10,7 +10,7 @@
 # /etc/pacman.conf — добавьте в конец:
 [custom-repo]
 SigLevel = Optional TrustedOnly
-Server = http://dryam.ru/aarch64
+Server = http://pkgs.dryam.ru/aarch64
 ```
 
 ```bash

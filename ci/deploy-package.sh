@@ -1,108 +1,164 @@
 #!/bin/bash
-# Deploy a single package to gh-pages with retry-based conflict resolution.
-# Runs inside the Arch Linux container. Requires GITHUB_TOKEN env var.
+# Deploy a single package to remote server via SCP with atomic flock-based DB update.
+# Runs inside the Arch Linux container.
 set -euo pipefail
 
 PKGDIR="$1"
-GH_REPO="dryamovvv/pkgs"
+SSH_HOST="${SSH_HOST:-dryam.ru}"
+SSH_PORT="${SSH_PORT:-222}"
+SSH_USER="${SSH_USER:-root}"
+REPO_PATH="${REPO_PATH:-/tmp/mnt/e73e95d7-6854-49b0-8a0a-b0a8923ad782/aarch64}"
+STAGING="/tmp/pkgs-staging"
+LOCKFILE="/tmp/repo.lock"
 
-if [ -z "${GITHUB_TOKEN:-}" ]; then
-  echo "ERROR: GITHUB_TOKEN not set"
-  exit 1
+SSH_KEY="${SSH_KEY:-/tmp/ssh_key}"
+if [ -z "${SSH_KEY:-}" ] || [ ! -f "$SSH_KEY" ]; then
+	echo "ERROR: SSH_KEY not set or key file not found"
+	exit 1
 fi
+chmod 600 "$SSH_KEY"
+
+SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p $SSH_PORT"
+REMOTE="$SSH_USER@$SSH_HOST"
 
 cd /workspace
 
-# Find package file (store absolute path — CWD changes to /tmp/repo later)
-PKGFILE=$(realpath "$(ls "$PKGDIR"/*.pkg.tar.* 2>/dev/null | head -1)" 2>/dev/null || echo "/workspace/$(ls "$PKGDIR"/*.pkg.tar.* 2>/dev/null | head -1)")
-if [ -z "$PKGFILE" ]; then
-  echo "ERROR: No package file found in $PKGDIR"
-  exit 1
+PKGFILE=$(
+	realpath "$(ls "$PKGDIR"/*.pkg.tar.* 2>/dev/null | head -1)" 2>/dev/null ||
+		echo "/workspace/$(ls "$PKGDIR"/*.pkg.tar.* 2>/dev/null | head -1)"
+)
+if [ -z "$PKGFILE" ] || [ ! -f "$PKGFILE" ]; then
+	echo "ERROR: No package file found in $PKGDIR"
+	exit 1
 fi
 PKGNAME=$(basename "$PKGFILE")
 echo "=== Deploying $PKGNAME ==="
 
-# Configure git credential helper (avoids token in process args/urls)
-git config --global credential.helper store
-echo "https://x-access-token:${GITHUB_TOKEN}@github.com" >~/.git-credentials
-chmod 600 ~/.git-credentials
-
 for attempt in $(seq 1 10); do
-  echo "=== Deploy attempt $attempt/10 ==="
+	echo "=== Deploy attempt $attempt/10 ==="
 
-  cd /workspace
+	WORKDIR=$(mktemp -d /tmp/repo-work-XXXXXX)
+	trap "rm -rf $WORKDIR" EXIT
 
-  # Git identity
-  git config --global user.email "github-actions[bot]@users.noreply.github.com"
-  git config --global user.name "github-actions[bot]"
-  rm -rf /tmp/repo
+	# Ensure staging and repo dirs exist on remote
+	ssh $SSH_OPTS "$REMOTE" "mkdir -p $STAGING $REPO_PATH" || {
+		echo "SSH connection failed, retrying..."
+		sleep 3
+		continue
+	}
 
-  # Clone existing gh-pages or create fresh
-  if git ls-remote --heads "https://github.com/${GH_REPO}.git" gh-pages 2>/dev/null | grep -q gh-pages; then
-    git clone --depth 1 -b gh-pages "https://github.com/${GH_REPO}.git" /tmp/repo || {
-      echo "Clone failed, retrying..."
-      sleep 3
-      continue
-    }
-    cd /tmp/repo
-  else
-    git clone --depth 1 "https://github.com/${GH_REPO}.git" /tmp/repo || {
-      echo "Clone failed, retrying..."
-      sleep 3
-      continue
-    }
-    cd /tmp/repo
-    git checkout --orphan gh-pages
-    git rm -rf . 2>/dev/null || true
-    mkdir -p aarch64
-    # Create a placeholder so git can commit (empty dirs aren't tracked)
-    echo "aarch64 repository" >aarch64/.gitkeep
-    git add aarch64
-    git commit -m "init: gh-pages branch for aarch64 repository"
-    git push origin gh-pages || {
-      echo "Push failed (another job created gh-pages?), retrying..."
-      sleep 3
-      continue
-    }
-  fi
+	# ── 1. SCP new package to staging ──
+	scp $SSH_OPTS "$PKGFILE" "$REMOTE:$STAGING/"
 
-  # Copy new package in (idempotent: overwrites same version)
-  cp "$PKGFILE" /tmp/repo/aarch64/
+	# ── 2. Download current repo DB (with flock for consistency) ──
+	DB_EXISTS=$(
+		ssh $SSH_OPTS "$REMOTE" "flock -w 30 $LOCKFILE -c \"
+      if [ -f $REPO_PATH/repo.db.tar.gz ]; then
+        cp $REPO_PATH/repo.db.tar.gz $STAGING/db_current.tar.gz
+        echo YES
+      else
+        echo NO
+      fi
+    \""
+	) || {
+		echo "Failed to check repo DB, retrying..."
+		sleep 3
+		continue
+	}
 
-  # Rebuild repo database with all packages
-  cd /tmp/repo/aarch64
-  repo-add -R repo.db.tar.gz *.pkg.tar.* 2>/dev/null || true
-  cd /tmp/repo
+	if [ "$DB_EXISTS" = "YES" ]; then
+		scp $SSH_OPTS "$REMOTE:$STAGING/db_current.tar.gz" "$WORKDIR/repo.db.tar.gz"
+		# Save hash for conflict detection (use MD5 since router has busybox md5sum)
+		DB_MD5=$(md5sum "$WORKDIR/repo.db.tar.gz" | cut -d' ' -f1)
+		# Save copy on remote for conflict detection
+		scp $SSH_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_current.tar.gz"
+		repo-add -R "$WORKDIR/repo.db.tar.gz" "$PKGNAME" 2>/dev/null || true
+	else
+		# First deploy: create new database
+		cd "$WORKDIR"
+		cp "$PKGFILE" "$WORKDIR/"
+		repo-add repo.db.tar.gz "$PKGNAME" 2>/dev/null || true
+		cd /workspace
+		DB_MD5="__first_deploy__"
+	fi
 
-  # Generate index.html
-  {
-    echo '<!DOCTYPE html>'
-    echo '<html lang="en">'
-    echo '<head><meta charset="UTF-8"><title>aarch64 Repository</title></head>'
-    echo '<body>'
-    echo '<h1>Arch Linux aarch64 Package Repository</h1>'
-    echo '<p>Optimized for Raspberry Pi 5 (Cortex-A76)</p><hr><pre>'
-    for f in aarch64/*.pkg.tar.*; do
-      [ -f "$f" ] || continue
-      name=$(basename "$f")
-      name_esc=$(printf '%s\n' "$name" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
-      echo "<a href=\"$f\">${name_esc}</a>"
-    done
-    echo '</pre></body></html>'
-  } >index.html
+	# ── 3. Generate index.html ──
+	REMOTE_LIST=$(ssh $SSH_OPTS "$REMOTE" "ls $REPO_PATH/*.pkg.tar.* 2>/dev/null" || true)
+	{
+		printf '<!DOCTYPE html>\n<html lang="en">\n<head><meta charset="UTF-8"><title>aarch64 Repository</title></head>\n<body>\n'
+		printf '<h1>Arch Linux aarch64 Package Repository</h1>\n<p>Optimized for Raspberry Pi 5 (Cortex-A76)</p>\n<hr>\n<pre>\n'
+		printf '%s\n' "$REMOTE_LIST" | while IFS= read -r f; do
+			[ -z "$f" ] && continue
+			n=$(basename "$f")
+			ne=$(printf '%s\n' "$n" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+			printf '<a href="aarch64/%s">%s</a>\n' "$n" "$ne"
+		done
+		ne=$(printf '%s\n' "$PKGNAME" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+		printf '<a href="aarch64/%s">%s</a>\n' "$PKGNAME" "$ne"
+		printf '</pre>\n</body>\n</html>\n'
+	} >"$WORKDIR/index.html"
 
-  # Commit and push
-  git add -A
-  git diff --cached --quiet || git commit -m "deploy: $PKGNAME"
+	# ── 4. SCP updated files to staging ──
+	scp $SSH_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_new.tar.gz"
+	scp $SSH_OPTS "$WORKDIR/repo.db.tar.gz.old" "$REMOTE:$STAGING/db_old.tar.gz" 2>/dev/null || true
+	scp $SSH_OPTS "$WORKDIR/repo.files.tar.gz" "$REMOTE:$STAGING/db_files.tar.gz" 2>/dev/null || true
+	scp $SSH_OPTS "$WORKDIR/repo.files.tar.gz.old" "$REMOTE:$STAGING/db_files_old.tar.gz" 2>/dev/null || true
+	scp $SSH_OPTS "$WORKDIR/index.html" "$REMOTE:$STAGING/"
 
-  if git push origin gh-pages 2>&1; then
-    echo "=== Deploy successful ==="
-    rm -f ~/.git-credentials
+	# ── 5. Atomic deploy with flock + conflict detection ──
+	DEPLOY_RESULT=$(
+		ssh $SSH_OPTS "$REMOTE" bash -s -- "$REPO_PATH" "$STAGING" "$LOCKFILE" "$DB_MD5" <<'SSH_SCRIPT'
+set -euo pipefail
+REPO_PATH="$1"
+STAGING="$2"
+LOCKFILE="$3"
+EXPECTED_MD5="$4"
+
+# Acquire lock (wait up to 120s)
+(
+  if ! flock -w 120 200; then
+    echo "LOCK_TIMEOUT"
     exit 0
   fi
 
-  echo "Push conflict (another job deployed), retrying..."
-  sleep 3
+  # Conflict detection: check if DB was modified since we downloaded it
+  if [ "$EXPECTED_MD5" != "__first_deploy__" ] && [ -f "$STAGING/db_current.tar.gz" ]; then
+    CURRENT_MD5=$(md5sum "$REPO_PATH/repo.db.tar.gz" 2>/dev/null | cut -d' ' -f1 || echo "none")
+    STAGED_MD5=$(md5sum "$STAGING/db_current.tar.gz" | cut -d' ' -f1)
+    if [ "$CURRENT_MD5" != "$STAGED_MD5" ]; then
+      echo "CONFLICT"
+      exit 0
+    fi
+  fi
+
+  # Atomic move from staging to repo
+  mv "$STAGING"/*.pkg.tar.* "$REPO_PATH/" 2>/dev/null || true
+  mv "$STAGING"/db_new.tar.gz       "$REPO_PATH/repo.db.tar.gz"
+  mv "$STAGING"/db_old.tar.gz       "$REPO_PATH/repo.db.tar.gz.old"  2>/dev/null || true
+  mv "$STAGING"/db_files.tar.gz     "$REPO_PATH/repo.files.tar.gz"   2>/dev/null || true
+  mv "$STAGING"/db_files_old.tar.gz "$REPO_PATH/repo.files.tar.gz.old" 2>/dev/null || true
+  mv "$STAGING"/index.html          "$REPO_PATH/../index.html"        2>/dev/null || true
+
+  # Cleanup staging
+  rm -f "$STAGING"/db_current.tar.gz "$STAGING"/db_new.tar.gz \
+        "$STAGING"/db_old.tar.gz "$STAGING"/db_files.tar.gz \
+        "$STAGING"/db_files_old.tar.gz
+  echo "DEPLOY_OK"
+) 200>"$LOCKFILE"
+SSH_SCRIPT
+	)
+
+	if echo "$DEPLOY_RESULT" | grep -q "DEPLOY_OK"; then
+		echo "=== Deploy successful ==="
+		rm -f "$SSH_KEY"
+		exit 0
+	elif echo "$DEPLOY_RESULT" | grep -q "CONFLICT"; then
+		echo "DB was modified by another job, retrying..."
+		sleep 3
+	else
+		echo "Deploy issue ($DEPLOY_RESULT), retrying..."
+		sleep 3
+	fi
 done
 
 echo "ERROR: Deploy failed after 10 attempts"

@@ -5,8 +5,8 @@ PKG="$1"
 PKGDIR="packages/$PKG"
 
 if [ ! -d "$PKGDIR" ]; then
-  echo "ERROR: Package directory $PKGDIR not found"
-  exit 1
+	echo "ERROR: Package directory $PKGDIR not found"
+	exit 1
 fi
 
 echo "=== Building package: $PKG ==="
@@ -16,7 +16,7 @@ pacman-key --init
 pacman-key --populate archlinuxarm
 
 # Install build essentials
-pacman -Sy --noconfirm --needed sudo ccache
+pacman -Sy --noconfirm --needed sudo ccache openssh
 
 # Set up ccache
 export CCACHE_DIR=/ccache

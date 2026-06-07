@@ -16,7 +16,7 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -122,12 +122,21 @@ jobs:
           limit-access-to-actor: true
           timeout-minutes: 30
 
-      # ── Deploy (inside container, retry-based) ──
-      - name: Deploy to repository
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # ── Deploy (inside container, SSH to remote server) ──
+      - name: Write SSH key
         run: |
-          docker exec -e GITHUB_TOKEN builder bash -c "cd /workspace && ci/deploy-package.sh packages/${{ matrix.pkg }}"
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/ssh-deploy-key
+          chmod 600 /tmp/ssh-deploy-key
+          docker cp /tmp/ssh-deploy-key builder:/tmp/ssh_key
+          rm -f /tmp/ssh-deploy-key
+
+      - name: Deploy to remote repository
+        run: |
+          docker exec \
+            -e SSH_HOST="${{ secrets.SSH_HOST }}" \
+            -e SSH_PORT="${{ secrets.SSH_PORT }}" \
+            -e SSH_USER="${{ secrets.SSH_USER }}" \
+            builder bash -c "cd /workspace && ci/deploy-package.sh packages/${{ matrix.pkg }}"
 
       # ── Artifact backup ──
       - name: Upload artifact

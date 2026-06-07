@@ -1,6 +1,4 @@
 #!/bin/bash
-# Deploy a single package to remote server via SCP with atomic flock-based DB update.
-# Runs inside the Arch Linux container.
 set -euo pipefail
 
 PKGDIR="$1"
@@ -8,7 +6,7 @@ SSH_HOST="${SSH_HOST:-dryam.ru}"
 SSH_PORT="${SSH_PORT:-222}"
 SSH_USER="${SSH_USER:-root}"
 REPO_PATH="${REPO_PATH:-/tmp/mnt/e73e95d7-6854-49b0-8a0a-b0a8923ad782/aarch64}"
-STAGING="/tmp/pkgs-staging"
+STAGING_BASE="/tmp/pkgs-staging"
 LOCKFILE="/tmp/repo.lock"
 
 SSH_KEY="${SSH_KEY:-/tmp/ssh_key}"
@@ -24,7 +22,6 @@ REMOTE="$SSH_USER@$SSH_HOST"
 
 cd /workspace
 
-# Find package file (absolute path)
 PKGFILE=$(find "$PKGDIR" -maxdepth 1 -name '*.pkg.tar.*' -type f 2>/dev/null | head -1)
 if [ -n "$PKGFILE" ]; then
 	PKGFILE="/workspace/$PKGFILE"
@@ -34,6 +31,8 @@ if [ -z "$PKGFILE" ] || [ ! -f "$PKGFILE" ]; then
 	exit 1
 fi
 PKGNAME=$(basename "$PKGFILE")
+STAGING="$STAGING_BASE/$PKGNAME"
+
 echo "=== Deploying $PKGNAME ==="
 
 for attempt in $(seq 1 10); do
@@ -41,7 +40,6 @@ for attempt in $(seq 1 10); do
 
 	WORKDIR=$(mktemp -d /tmp/repo-work-XXXXXX)
 
-	# Ensure staging and repo dirs exist on remote
 	ssh $SSH_OPTS "$REMOTE" "mkdir -p $STAGING $REPO_PATH" || {
 		echo "SSH connection failed, retrying..."
 		sleep 3
@@ -49,15 +47,13 @@ for attempt in $(seq 1 10); do
 		continue
 	}
 
-	# ── 1. SCP new package to staging ──
 	if ! scp $SCP_OPTS "$PKGFILE" "$REMOTE:$STAGING/" 2>&1; then
-		echo "SCP failed (exit=$?), retrying..."
+		echo "SCP package failed, retrying..."
 		sleep 3
 		rm -rf "$WORKDIR"
 		continue
 	fi
 
-	# ── 2. Download current repo DB (with flock for consistency) ──
 	DB_EXISTS=$(
 		ssh $SSH_OPTS "$REMOTE" "flock -w 30 $LOCKFILE -c \"
       if [ -f $REPO_PATH/repo.db.tar.gz ]; then
@@ -75,25 +71,43 @@ for attempt in $(seq 1 10); do
 	}
 
 	if [ "$DB_EXISTS" = "YES" ]; then
-		scp $SCP_OPTS "$REMOTE:$STAGING/db_current.tar.gz" "$WORKDIR/repo.db.tar.gz" || {
+		if ! scp $SCP_OPTS "$REMOTE:$STAGING/db_current.tar.gz" "$WORKDIR/repo.db.tar.gz"; then
 			echo "Failed to download repo DB, retrying..."
 			sleep 3
 			rm -rf "$WORKDIR"
 			continue
-		}
+		fi
 		DB_MD5=$(md5sum "$WORKDIR/repo.db.tar.gz" | cut -d' ' -f1)
-		scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_current.tar.gz" 2>/dev/null || true
 		cp "$PKGFILE" "$WORKDIR/"
-		(cd "$WORKDIR" && repo-add -R repo.db.tar.gz "$PKGNAME" 2>/dev/null) || true
+		if ! (cd "$WORKDIR" && repo-add -R repo.db.tar.gz "$PKGNAME"); then
+			echo "repo-add failed, retrying..."
+			sleep 3
+			rm -rf "$WORKDIR"
+			continue
+		fi
+		if [ ! -f "$WORKDIR/repo.db.tar.gz" ]; then
+			echo "repo-add did not produce repo.db.tar.gz, retrying..."
+			rm -rf "$WORKDIR"
+			sleep 3
+			continue
+		fi
 	else
-		cd "$WORKDIR"
 		cp "$PKGFILE" "$WORKDIR/"
-		repo-add repo.db.tar.gz "$PKGNAME" 2>/dev/null || true
-		cd /workspace
+		if ! (cd "$WORKDIR" && repo-add repo.db.tar.gz "$PKGNAME"); then
+			echo "repo-add failed, retrying..."
+			sleep 3
+			rm -rf "$WORKDIR"
+			continue
+		fi
+		if [ ! -f "$WORKDIR/repo.db.tar.gz" ]; then
+			echo "repo-add did not produce repo.db.tar.gz, retrying..."
+			rm -rf "$WORKDIR"
+			sleep 3
+			continue
+		fi
 		DB_MD5="__first_deploy__"
 	fi
 
-	# ── 3. Generate index.html ──
 	REMOTE_LIST=$(ssh $SSH_OPTS "$REMOTE" "ls $REPO_PATH/*.pkg.tar.* 2>/dev/null" || true)
 	{
 		printf '<!DOCTYPE html>\n<html lang="en">\n<head><meta charset="UTF-8"><title>aarch64 Repository</title></head>\n<body>\n'
@@ -109,16 +123,19 @@ for attempt in $(seq 1 10); do
 		printf '</pre>\n</body>\n</html>\n'
 	} >"$WORKDIR/index.html"
 
-	# ── 4. SCP updated files to staging ──
-	scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_new.tar.gz" 2>/dev/null || true
+	if ! scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_new.tar.gz"; then
+		echo "SCP db_new failed, retrying..."
+		sleep 3
+		rm -rf "$WORKDIR"
+		continue
+	fi
 	scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz.old" "$REMOTE:$STAGING/db_old.tar.gz" 2>/dev/null || true
 	scp $SCP_OPTS "$WORKDIR/repo.files.tar.gz" "$REMOTE:$STAGING/db_files.tar.gz" 2>/dev/null || true
 	scp $SCP_OPTS "$WORKDIR/repo.files.tar.gz.old" "$REMOTE:$STAGING/db_files_old.tar.gz" 2>/dev/null || true
 	scp $SCP_OPTS "$WORKDIR/index.html" "$REMOTE:$STAGING/" 2>/dev/null || true
 
-	# ── 5. Atomic deploy with flock + conflict detection ──
 	DEPLOY_RESULT=$(
-		ssh $SSH_OPTS "$REMOTE" bash -s -- "$REPO_PATH" "$STAGING" "$LOCKFILE" "$DB_MD5" <<'SSH_SCRIPT' || true
+		ssh $SSH_OPTS "$REMOTE" bash -s -- "$REPO_PATH" "$STAGING" "$LOCKFILE" "$DB_MD5" <<'SSH_SCRIPT'
 set -euo pipefail
 REPO_PATH="$1"
 STAGING="$2"
@@ -131,9 +148,9 @@ EXPECTED_MD5="$4"
     exit 0
   fi
 
-  if [ "$EXPECTED_MD5" != "__first_deploy__" ] && [ -f "$STAGING/db_current.tar.gz" ]; then
+  if [ "$EXPECTED_MD5" != "__first_deploy__" ]; then
     CURRENT_MD5=$(md5sum "$REPO_PATH/repo.db.tar.gz" 2>/dev/null | cut -d' ' -f1 || echo "none")
-    STAGED_MD5=$(md5sum "$STAGING/db_current.tar.gz" | cut -d' ' -f1)
+    STAGED_MD5=$(md5sum "$STAGING/db_current.tar.gz" 2>/dev/null | cut -d' ' -f1 || echo "missing")
     if [ "$CURRENT_MD5" != "$STAGED_MD5" ]; then
       echo "CONFLICT"
       exit 0
@@ -141,7 +158,7 @@ EXPECTED_MD5="$4"
   fi
 
   if [ ! -f "$STAGING/db_new.tar.gz" ]; then
-    echo "CONFLICT"
+    echo "MISSING_DB"
     exit 0
   fi
 

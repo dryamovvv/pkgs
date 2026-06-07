@@ -1,0 +1,58 @@
+# Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
+# Optimized for Raspberry Pi 5 (Cortex-A76)
+pkgname=zellij
+pkgver=0.44.3
+pkgrel=1
+pkgdesc="A terminal workspace with batteries included — optimized for Raspberry Pi 5 (Cortex-A76)"
+arch=('aarch64')
+url="https://zellij.dev"
+license=('MIT')
+options=('!debug')
+depends=(
+  'gcc-libs'
+  'glibc'
+)
+makedepends=(
+  'cargo'
+  'git'
+  'pkgconf'
+)
+optdepends=(
+  'zsh: zsh shell integration'
+  'bash: bash shell integration'
+  'fish: fish shell integration'
+)
+source=("https://github.com/zellij-org/zellij/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('c5f4f800b59fa23a4d9ba89ec49c66f7a7281748b34c768869841b9b48e301be')
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+  cargo fetch --locked --target aarch64-unknown-linux-gnu
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+  export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export LDFLAGS="-Wl,-z,max-page-size=0x4000"
+  export RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"
+  cargo build --release --locked --no-default-features --features web_server_capability,vendored_curl,unstable
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver"
+  cargo test --release --locked --no-default-features --features web_server_capability,vendored_curl,unstable || true
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  install -Dm755 "target/release/zellij" "$pkgdir/usr/bin/zellij"
+
+  install -Dm644 "target/release/completions/zellij.bash" "$pkgdir/usr/share/bash-completion/completions/zellij"
+  install -Dm644 "target/release/completions/zellij.zsh" "$pkgdir/usr/share/zsh/site-functions/_zellij"
+  install -Dm644 "target/release/completions/zellij.fish" "$pkgdir/usr/share/fish/vendor_completions.d/zellij.fish"
+
+  install -Dm644 README.md "$pkgdir/usr/share/doc/zellij/README.md"
+  install -Dm644 LICENSE.md "$pkgdir/usr/share/licenses/zellij/LICENSE.md"
+}

@@ -34,17 +34,22 @@ if [ -z "$hash" ]; then
   exit 1
 fi
 
+# Compute sanitized hash safe for cache keys: keep alnum and -
+sanitized=$(printf "%s" "$hash" | tr -cs 'A-Za-z0-9-' '-' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
+
 # Write outputs for GitHub Actions
 # Prefer using GITHUB_OUTPUT file if provided
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
   echo "build_hash=$hash" >> "$GITHUB_OUTPUT"
+  echo "build_hash_sanitized=$sanitized" >> "$GITHUB_OUTPUT"
   echo "compute_failed=$compute_failed" >> "$GITHUB_OUTPUT"
 else
   # Fallback for local testing
   echo "build_hash=$hash"
+  echo "build_hash_sanitized=$sanitized"
   echo "compute_failed=$compute_failed"
 fi
 
 # Also print computed hash
-echo "Computed build_hash=$hash"
+echo "Computed build_hash=$hash (sanitized=$sanitized)"
 exit 0

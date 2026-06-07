@@ -104,6 +104,11 @@ jobs:
           docker cp . builder:/workspace/
           docker exec builder bash -c "cd /workspace && ci/build-package.sh ${{ matrix.pkg }}"
 
+      - name: Fix cargo cache permissions
+        if: always()
+        run: |
+          sudo chown -R $(id -u):$(id -g) /tmp/cargo-registry /tmp/cargo-git 2>/dev/null || true
+
       - name: List packages
         run: |
           docker cp builder:/workspace/packages ./packages-built

@@ -1,0 +1,85 @@
+# Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
+# Optimized for Raspberry Pi 5 (Cortex-A76)
+pkgname=atuin
+pkgver=18.16.1
+pkgrel=1
+pkgdesc="Magical shell history — replaces your shell history with a SQLite database, with encrypted sync and search UI, optimized for Raspberry Pi 5 (Cortex-A76)"
+arch=('aarch64')
+url="https://atuin.sh"
+license=('MIT')
+options=('!debug')
+depends=(
+  'gcc-libs'
+  'glibc'
+  'sqlite'
+  'wayland'
+)
+makedepends=(
+  'cargo'
+  'git'
+  'pkgconf'
+  'protobuf'
+  'sqlite'
+  'wayland'
+)
+optdepends=(
+  'bash: bash shell integration'
+  'zsh: zsh shell integration'
+  'fish: fish shell integration'
+  'atuin-server: self-hosted sync server (included in this package)'
+)
+provides=("atuin" "atuin-server")
+conflicts=("atuin")
+backup=('etc/atuin/server.toml')
+source=(
+  "https://github.com/atuinsh/atuin/archive/refs/tags/v$pkgver.tar.gz"
+  "atuin-server.service"
+  "atuin-server.sysusers"
+  "atuin-server.tmpfiles"
+)
+sha256sums=(
+  '752802d4e8eef4896e9bc779b82f85e3d433c5934df5169e9b0f2537acf7f6e9'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+)
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+  export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export LDFLAGS="-Wl,-z,max-page-size=0x4000"
+  export RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"
+  cargo build --release --locked --all-features
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver"
+  cargo test --release --locked --all-features || true
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  install -Dm755 "target/release/atuin" "$pkgdir/usr/bin/atuin"
+  install -Dm755 "target/release/atuin-server" "$pkgdir/usr/bin/atuin-server"
+
+  install -d "$pkgdir/usr/share/bash-completion/completions"
+  install -d "$pkgdir/usr/share/zsh/site-functions"
+  install -d "$pkgdir/usr/share/fish/vendor_completions.d"
+  ./target/release/atuin gen-completions --shell bash -o "$pkgdir/usr/share/bash-completion/completions/"
+  ./target/release/atuin gen-completions --shell zsh -o "$pkgdir/usr/share/zsh/site-functions/"
+  ./target/release/atuin gen-completions --shell fish -o "$pkgdir/usr/share/fish/vendor_completions.d/"
+
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+
+  install -Dm644 "$srcdir/atuin-server.service" "$pkgdir/usr/lib/systemd/system/atuin-server.service"
+  install -Dm644 "$srcdir/atuin-server.sysusers" "$pkgdir/usr/lib/sysusers.d/atuin.conf"
+  install -Dm644 "$srcdir/atuin-server.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/atuin.conf"
+}

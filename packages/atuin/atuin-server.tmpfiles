@@ -1,0 +1,2 @@
+d /etc/atuin 0755 atuin atuin
+d /var/lib/atuin 0755 atuin atuin

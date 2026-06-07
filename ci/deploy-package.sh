@@ -16,7 +16,7 @@ if [ -n "$GPG_KEY" ] && [ -n "$GPG_IMPORT" ]; then
 	echo "$GPG_IMPORT" | gpg --import --batch --no-tty 2>&1 || true
 	if [ -n "$GPG_PASSPHRASE" ]; then
 		gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --pinentry-mode loopback \
-			--edit-key "$GPG_KEY" trust quit <<EOF
+			--edit-key "$GPG_KEY" trust quit 2>&1 <<EOF || true
 5
 y
 EOF

@@ -44,6 +44,28 @@ jobs:
         pkg: ${{ fromJSON(needs.detect-changed-packages.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Compute build input hash
+        id: compute-hash
+        run: |
+          chmod +x ci/compute-build-hash.sh
+          BUILD_HASH=$(ci/compute-build-hash.sh packages/${{ matrix.pkg }})
+          echo "build_hash=$BUILD_HASH" >> $GITHUB_OUTPUT
+
+      - name: Restore built package cache
+        id: built-cache
+        uses: actions/cache@v5
+        with:
+          path: /tmp/build-cache/${{ matrix.pkg }}
+          key: build-artifact-${{ matrix.pkg }}-${{ steps.compute-hash.outputs.build_hash }}
+
+      - name: Use cached build artifact
+        if: steps.built-cache.outputs.cache-hit == 'true'
+        run: |
+          mkdir -p packages-built/${{ matrix.pkg }}
+          cp -r /tmp/build-cache/${{ matrix.pkg }}/* packages-built/${{ matrix.pkg }}/ || true
 
       # ── Docker image cache ──
       - name: Cache Docker image
@@ -91,6 +113,7 @@ jobs:
 
       # ── Build ──
       - name: Build in container
+        if: steps.built-cache.outputs.cache-hit != 'true'
         timeout-minutes: 90
         run: |
           mkdir -p /tmp/pacman-cache /tmp/ccache /tmp/cargo-registry /tmp/cargo-git
@@ -119,6 +142,12 @@ jobs:
         run: |
           docker cp builder:/workspace/packages ./packages-built
           find packages-built -name '*.pkg.tar.*' -type f -ls
+
+      - name: Populate build cache
+        if: steps.built-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/build-cache/${{ matrix.pkg }}
+          cp -r packages-built/${{ matrix.pkg }}/* /tmp/build-cache/${{ matrix.pkg }}/ || true
 
       # ── Debug via SSH (only on manual trigger with debug_enabled=true) ──
       - name: Setup tmate session

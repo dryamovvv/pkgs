@@ -18,7 +18,7 @@ if [ -z "${SSH_KEY:-}" ] || [ ! -f "$SSH_KEY" ]; then
 fi
 chmod 600 "$SSH_KEY"
 
-SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p $SSH_PORT"
+SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o Port=$SSH_PORT"
 REMOTE="$SSH_USER@$SSH_HOST"
 
 cd /workspace

@@ -27,6 +27,8 @@ PKGFILE=$(
 	realpath "$(ls "$PKGDIR"/*.pkg.tar.* 2>/dev/null | head -1)" 2>/dev/null ||
 		echo "/workspace/$(ls "$PKGDIR"/*.pkg.tar.* 2>/dev/null | head -1)"
 )
+echo "DEBUG: PKGDIR=$PKGDIR PKGFILE=$PKGFILE"
+echo "DEBUG: ls PKGDIR: $(ls "$PKGDIR" 2>/dev/null)"
 if [ -z "$PKGFILE" ] || [ ! -f "$PKGFILE" ]; then
 	echo "ERROR: No package file found in $PKGDIR"
 	exit 1
@@ -48,6 +50,7 @@ for attempt in $(seq 1 10); do
 	}
 
 	# ── 1. SCP new package to staging ──
+	echo "DEBUG: scp $PKGFILE -> $REMOTE:$STAGING/"
 	scp $SSH_OPTS "$PKGFILE" "$REMOTE:$STAGING/"
 
 	# ── 2. Download current repo DB (with flock for consistency) ──

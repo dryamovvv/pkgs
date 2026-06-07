@@ -1,0 +1,16 @@
+post_install() {
+  echo ""
+  echo "==> Tree-sitter grammars are not included in this package."
+  echo "==> To fetch and build grammars, run:"
+  echo "==>   hx --grammar fetch && hx --grammar build"
+  echo ""
+  echo "==> This requires 'git' and a C compiler ('gcc') to be installed."
+  echo ""
+}
+
+post_upgrade() {
+  echo ""
+  echo "==> To update tree-sitter grammars after an upgrade, run:"
+  echo "==>   hx --grammar fetch && hx --grammar build"
+  echo ""
+}

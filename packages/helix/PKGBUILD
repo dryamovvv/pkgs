@@ -1,14 +1,14 @@
 # Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
-# Contributor: dryamovvv (Arch Linux package)
 # Optimized for Raspberry Pi 5 (Cortex-A76)
 pkgname=helix
 pkgver=25.07.1
-pkgrel=1
+pkgrel=2
 pkgdesc="A post-modern modal text editor optimized for Raspberry Pi 5 (Cortex-A76)"
 arch=('aarch64')
 url="https://helix-editor.com/"
 license=('MPL-2.0')
 options=('!debug' '!lto')
+install=helix.install
 depends=(
   'gcc-libs'
   'glibc'
@@ -18,6 +18,7 @@ makedepends=(
   'git'
 )
 optdepends=(
+  'helix-grammars: pre-built tree-sitter grammars (run hx --grammar fetch && hx --grammar build instead)'
   'python: Python language server support'
   'rust-analyzer: Rust language server support'
   'clang: C/C++ language server support'
@@ -57,7 +58,6 @@ package() {
   install -Dm755 "target/opt/hx" "$pkgdir/usr/bin/hx"
 
   install -d "$pkgdir/usr/lib/helix/runtime"
-  cp -r runtime/grammars "$pkgdir/usr/lib/helix/runtime/"
   cp -r runtime/queries "$pkgdir/usr/lib/helix/runtime/"
   cp -r runtime/themes "$pkgdir/usr/lib/helix/runtime/"
   [ -d runtime/scripts ] && cp -r runtime/scripts "$pkgdir/usr/lib/helix/runtime/"

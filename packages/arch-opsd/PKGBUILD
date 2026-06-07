@@ -2,7 +2,7 @@
 # Optimized for Raspberry Pi 5 (Cortex-A76)
 pkgname=arch-opsd
 pkgver=0.1.0rc1
-pkgrel=2
+pkgrel=4
 pkgdesc="MCP server for Arch Linux ecosystem — single static Rust binary"
 arch=('aarch64')
 url="https://github.com/dryamovvv/arch-mcp"

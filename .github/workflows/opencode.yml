@@ -101,6 +101,47 @@ jobs:
 
             Do NOT wait for CI. The auto-merge workflow will merge after CI passes.
 
+      - name: Run opencode (modify-package)
+        if: |
+          github.event_name == 'issues' &&
+          contains(github.event.issue.labels.*.name, 'modify-package')
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        with:
+          model: opencode/deepseek-v4-flash-free
+          share: true
+          use_github_token: false
+          prompt: |
+            A package modification request was opened:
+
+            **Issue:** ${{ github.event.issue.title }}
+            **Body:**
+            ${{ github.event.issue.body }}
+
+            ## Your task
+
+            1. **Extract package name** from the issue title/body — must be an EXISTING package in `packages/`.
+            2. **Read** the current `packages/{pkg-name}/PKGBUILD`, `AGENTS.md`, and `README.md`.
+            3. **Understand the change request** from the issue body.
+            4. **Research** if needed — e.g., if updating version, find latest upstream release, new dependencies, new features.
+            5. **Create branch:** `modify-package/{pkg-name}` from main.
+            6. **Apply changes:**
+               - Update PKGBUILD (version, features, dependencies, flags)
+               - Update AGENTS.md and README.md if features changed
+               - Add/remove local files (services, configs, .install) as needed
+               - Preserve RPi5 Cortex-A76 optimization flags
+            7. **Do NOT change unrelated packages or CI scripts.**
+            8. **Commit** with message: `fix({pkg-name}): <what changed>`
+            9. **Push** the branch.
+            10. **Open PR** against main with body summarizing the changes.
+            11. **Comment on issue** with PR link.
+
+            Do NOT wait for CI. The auto-merge workflow will merge after CI passes.
+
       - name: Run opencode (new-package comment)
         if: |
           github.event_name == 'issue_comment' &&
@@ -173,7 +214,7 @@ jobs:
       - name: Run opencode (default)
         if: |
           steps.mode.outputs.mode == 'unknown' ||
-          (github.event_name == 'issues' && !contains(github.event.issue.labels.*.name, 'new-package'))
+          (github.event_name == 'issues' && !contains(github.event.issue.labels.*.name, 'new-package') && !contains(github.event.issue.labels.*.name, 'modify-package'))
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}

@@ -2,23 +2,22 @@
 # Optimized for Raspberry Pi 5 (Cortex-A76)
 pkgname=helix
 pkgver=25.07.1
-pkgrel=2
+pkgrel=3
 pkgdesc="A post-modern modal text editor optimized for Raspberry Pi 5 (Cortex-A76)"
 arch=('aarch64')
 url="https://helix-editor.com/"
 license=('MPL-2.0')
 options=('!debug' '!lto')
-install=helix.install
 depends=(
   'gcc-libs'
   'glibc'
 )
 makedepends=(
   'cargo'
+  'gcc'
   'git'
 )
 optdepends=(
-  'helix-grammars: pre-built tree-sitter grammars (run hx --grammar fetch && hx --grammar build instead)'
   'python: Python language server support'
   'rust-analyzer: Rust language server support'
   'clang: C/C++ language server support'
@@ -45,6 +44,9 @@ build() {
   export LDFLAGS="-Wl,-z,max-page-size=0x4000"
   export RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"
   cargo build --profile opt --locked --no-default-features --features git
+
+  ./target/opt/hx --grammar fetch
+  ./target/opt/hx --grammar build
 }
 
 check() {
@@ -60,6 +62,7 @@ package() {
   install -d "$pkgdir/usr/lib/helix/runtime"
   cp -r runtime/queries "$pkgdir/usr/lib/helix/runtime/"
   cp -r runtime/themes "$pkgdir/usr/lib/helix/runtime/"
+  cp -r runtime/grammars "$pkgdir/usr/lib/helix/runtime/"
   [ -d runtime/scripts ] && cp -r runtime/scripts "$pkgdir/usr/lib/helix/runtime/"
 
   install -Dm644 contrib/completion/hx.bash "$pkgdir/usr/share/bash-completion/completions/hx"

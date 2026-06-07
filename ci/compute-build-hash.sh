@@ -29,8 +29,8 @@ if [ -f PKGBUILD ]; then
 fi
 
 # Extract source and sha256sums blocks (if present)
-awk '/^source=\(/,/^\)/{if(!/^source=\(|/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' >/tmp/ci_sources_$$.txt || true
-awk '/^sha256sums=\(/,/^\)/{if(!/^sha256sums=\(|/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' >/tmp/ci_sums_$$.txt || true
+awk '/^source=\(/,/^\)/{if(!/^source=\(/ && !/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' >/tmp/ci_sources_$$.txt || true
+awk '/^sha256sums=\(/,/^\)/{if(!/^sha256sums=\(/ && !/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' >/tmp/ci_sums_$$.txt || true
 
 # Handle declared sha256sums in PKGBUILD
 if [ ! -s /tmp/ci_sums_$$.txt ]; then

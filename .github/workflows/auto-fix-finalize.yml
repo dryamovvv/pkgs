@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   finalize-auto-fix:
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'auto-fix/')
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.head.ref, 'auto-fix')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo

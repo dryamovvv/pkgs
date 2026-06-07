@@ -62,8 +62,7 @@ jobs:
       pull-requests: write
       issues: write
     concurrency:
-      group: auto-fix-${{ github.ref }}
-      cancel-in-progress: false
+      group: auto-fix-${{ inputs.issue-number }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6

@@ -42,5 +42,5 @@ package() {
   cd "$srcdir/hyperfine-1.20.0"
   install -Dm755 "target/release/hyperfine" "$pkgdir/usr/bin/hyperfine"
   install -Dm644 "README.md" "$pkgdir/usr/share/doc/hyperfine/README.md"
-  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/hyperfine/LICENSE"
+  install -Dm644 "LICENSE-APACHE" "$pkgdir/usr/share/licenses/hyperfine/LICENSE"
 }

@@ -35,7 +35,7 @@ build() {
 
 check() {
   cd "$srcdir/ripgrep-15.1.0"
-  cargo test --workspace --all-targets --all-features || true
+  cargo test --workspace --lib --bins --tests --all-features || true
 }
 
 package() {

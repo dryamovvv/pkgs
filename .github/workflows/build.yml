@@ -198,7 +198,8 @@ jobs:
         if: steps.built-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p /tmp/build-cache/${{ matrix.pkg }}
-          cp -r packages-built/${{ matrix.pkg }}/* /tmp/build-cache/${{ matrix.pkg }}/ || true
+          cp packages-built/${{ matrix.pkg }}/*.pkg.tar.* /tmp/build-cache/${{ matrix.pkg }}/ || true
+          cp packages-built/${{ matrix.pkg }}/*.pkg.tar.*.sig /tmp/build-cache/${{ matrix.pkg }}/ 2>/dev/null || true
 
       # ── Debug via SSH (only on manual trigger with debug_enabled=true) ──
       - name: Setup tmate session

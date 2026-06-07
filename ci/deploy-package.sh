@@ -60,21 +60,29 @@ fi
 
 echo "=== Deploying $PKGNAME ==="
 
-for attempt in $(seq 1 10); do
-	echo "=== Deploy attempt $attempt/10 ==="
+for attempt in $(seq 1 30); do
+	echo "=== Deploy attempt $attempt/30 ==="
 
 	WORKDIR=$(mktemp -d /tmp/repo-work-XXXXXX)
 
 	ssh $SSH_OPTS "$REMOTE" "mkdir -p $STAGING $REPO_PATH" || {
 		echo "SSH connection failed, retrying..."
-		sleep 3
+		sleep $((3 + attempt*2 + (RANDOM % 5)))
 		rm -rf "$WORKDIR"
 		continue
 	}
 
+	# If package already exists on remote repo, skip deployment
+	if ssh $SSH_OPTS "$REMOTE" "[ -f $REPO_PATH/$PKGNAME ]"; then
+		echo "Package $PKGNAME already exists on remote; skipping deploy"
+		rm -rf "$WORKDIR"
+		rm -f "$SSH_KEY"
+		exit 0
+	fi
+
 	if ! scp $SCP_OPTS "$PKGFILE" "$REMOTE:$STAGING/" 2>&1; then
 		echo "SCP package failed, retrying..."
-		sleep 3
+		sleep $((3 + attempt*2 + (RANDOM % 5)))
 		rm -rf "$WORKDIR"
 		continue
 	fi
@@ -104,7 +112,7 @@ for attempt in $(seq 1 10); do
 	if [ "$DB_EXISTS" = "YES" ]; then
 		if ! scp $SCP_OPTS "$REMOTE:$STAGING/db_current.tar.gz" "$WORKDIR/repo.db.tar.gz"; then
 			echo "Failed to download repo DB, retrying..."
-			sleep 3
+			sleep $((3 + attempt*2 + (RANDOM % 5)))
 			rm -rf "$WORKDIR"
 			continue
 		fi
@@ -126,7 +134,7 @@ for attempt in $(seq 1 10); do
 		if [ ! -f "$WORKDIR/repo.db.tar.gz" ]; then
 			echo "repo-add did not produce repo.db.tar.gz, retrying..."
 			rm -rf "$WORKDIR"
-			sleep 3
+			sleep $((3 + attempt*2 + (RANDOM % 5)))
 			continue
 		fi
 	else
@@ -146,7 +154,7 @@ for attempt in $(seq 1 10); do
 		if [ ! -f "$WORKDIR/repo.db.tar.gz" ]; then
 			echo "repo-add did not produce repo.db.tar.gz, retrying..."
 			rm -rf "$WORKDIR"
-			sleep 3
+			sleep $((3 + attempt*2 + (RANDOM % 5)))
 			continue
 		fi
 		DB_MD5="__first_deploy__"
@@ -169,7 +177,7 @@ for attempt in $(seq 1 10); do
 
 	if ! scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_new.tar.gz"; then
 		echo "SCP db_new failed, retrying..."
-		sleep 3
+		sleep $((3 + attempt*2 + (RANDOM % 5)))
 		rm -rf "$WORKDIR"
 		continue
 	fi
@@ -235,10 +243,10 @@ SSH_SCRIPT
 		exit 0
 	elif echo "$DEPLOY_RESULT" | grep -q "CONFLICT"; then
 		echo "DB was modified by another job, retrying..."
-		sleep 3
+	sleep $((3 + attempt*2 + (RANDOM % 5)))
 	else
 		echo "Deploy issue ($DEPLOY_RESULT), retrying..."
-		sleep 3
+	sleep $((3 + attempt*2 + (RANDOM % 5)))
 	fi
 done
 

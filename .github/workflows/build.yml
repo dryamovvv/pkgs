@@ -14,6 +14,11 @@ on:
         description: "Enable tmate SSH debugging (connect to CI container)"
         required: false
         default: false
+      force_pkg:
+        type: string
+        description: "Force running a specific package (for testing)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -32,7 +37,14 @@ jobs:
         with:
           fetch-depth: 2
       - id: set-matrix
-        run: echo "matrix=$(ci/detect-changes.sh)" >> $GITHUB_OUTPUT
+        env:
+          FORCE_PKG: ${{ github.event.inputs.force_pkg }}
+        run: |
+          if [ -n "${FORCE_PKG:-}" ]; then
+            echo "matrix=[\"${FORCE_PKG}\"]" >> $GITHUB_OUTPUT
+          else
+            echo "matrix=$(ci/detect-changes.sh)" >> $GITHUB_OUTPUT
+          fi
 
   build-packages-matrix:
     needs: detect-changed-packages
@@ -52,14 +64,14 @@ jobs:
         run: |
           chmod +x ci/run-compute-hash.sh ci/compute-build-hash.sh
           ./ci/run-compute-hash.sh packages/${{ matrix.pkg }}
-          echo "build_hash=${{ steps.compute-hash.outputs.build_hash }}"
+          echo "Computed outputs: build_hash=${{ steps.compute-hash.outputs.build_hash }} build_hash_sanitized=${{ steps.compute-hash.outputs.build_hash_sanitized }}"
 
       - name: Restore built package cache
         id: built-cache
         uses: actions/cache@v5
         with:
           path: /tmp/build-cache/${{ matrix.pkg }}
-          key: build-artifact-${{ matrix.pkg }}-${{ steps.compute-hash.outputs.build_hash }}
+          key: build-artifact-${{ matrix.pkg }}-${{ steps.compute-hash.outputs.build_hash_sanitized }}
 
       - name: Show build cache info
         run: |
@@ -109,7 +121,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: /tmp/ccache
-          key: ccache-v2-${{ matrix.pkg }}-${{ hashFiles(format('packages/{0}/PKGBUILD', matrix.pkg)) }}
+          key: ccache-v2-${{ matrix.pkg }}-${{ steps.compute-hash.outputs.build_hash_sanitized }}
           restore-keys: ccache-v2-${{ matrix.pkg }}-
 
       - name: Show ccache info
@@ -124,7 +136,7 @@ jobs:
           path: |
             /tmp/cargo-registry
             /tmp/cargo-git
-          key: cargo-v2-${{ matrix.pkg }}-${{ hashFiles(format('packages/{0}/PKGBUILD', matrix.pkg)) }}
+          key: cargo-v2-${{ matrix.pkg }}-${{ steps.compute-hash.outputs.build_hash_sanitized }}
           restore-keys: cargo-v2-${{ matrix.pkg }}-
 
       # ── Build ──

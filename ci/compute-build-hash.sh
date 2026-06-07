@@ -19,8 +19,9 @@ if [ -f PKGBUILD ]; then
 fi
 
 # Extract source and sha256sums blocks (if present)
-awk '/^source=\(/,/^\)/{if(!/^source=\(|/^\)/) print}' PKGBUILD 2>/dev/null | sed 's/[\"'"'\']\?//g' | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' > /tmp/ci_sources_$$.txt || true
-awk '/^sha256sums=\(/,/^\)/{if(!/^sha256sums=\(|/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\"' | tr '\n' ' ' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' > /tmp/ci_sums_$$.txt || true
+# Extract source and sha256sums blocks (if present)
+awk '/^source=\(/,/^\)/{if(!/^source=\(|/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' > /tmp/ci_sources_$$.txt || true
+awk '/^sha256sums=\(/,/^\)/{if(!/^sha256sums=\(|/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' > /tmp/ci_sums_$$.txt || true
 
 if [ -s /tmp/ci_sources_$$.txt ]; then
   echo "---SOURCES---" >> "$TMP_IN"

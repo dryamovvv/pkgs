@@ -42,5 +42,5 @@ package() {
   cd "$srcdir/eza-0.23.4"
   install -Dm755 "target/release/eza" "$pkgdir/usr/bin/eza"
   install -Dm644 "README.md" "$pkgdir/usr/share/doc/eza/README.md"
-  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/eza/LICENSE"
+  install -Dm644 "LICENSE.txt" "$pkgdir/usr/share/licenses/eza/LICENSE"
 }

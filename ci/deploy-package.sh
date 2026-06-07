@@ -29,19 +29,12 @@ PKGFILE=$(find "$PKGDIR" -maxdepth 1 -name '*.pkg.tar.*' -type f 2>/dev/null | h
 if [ -n "$PKGFILE" ]; then
 	PKGFILE="/workspace/$PKGFILE"
 fi
-echo "DEBUG: PKGDIR=$PKGDIR"
-echo "DEBUG: find output: $PKGFILE"
-echo "DEBUG: ls -la $PKGDIR:"
-ls -la "$PKGDIR" 2>/dev/null || echo "(cannot list $PKGDIR)"
-
 if [ -z "$PKGFILE" ] || [ ! -f "$PKGFILE" ]; then
 	echo "ERROR: No package file found in $PKGDIR"
 	exit 1
 fi
-
 PKGNAME=$(basename "$PKGFILE")
-PKGSIZE=$(stat -c%s "$PKGFILE" 2>/dev/null || echo "unknown")
-echo "=== Deploying $PKGNAME ($PKGSIZE bytes) ==="
+echo "=== Deploying $PKGNAME ==="
 
 for attempt in $(seq 1 10); do
 	echo "=== Deploy attempt $attempt/10 ==="
@@ -57,7 +50,6 @@ for attempt in $(seq 1 10); do
 	}
 
 	# ── 1. SCP new package to staging ──
-	echo "scp: $PKGFILE ($(stat -c%s "$PKGFILE") bytes)"
 	if ! scp $SCP_OPTS "$PKGFILE" "$REMOTE:$STAGING/" 2>&1; then
 		echo "SCP failed (exit=$?), retrying..."
 		sleep 3

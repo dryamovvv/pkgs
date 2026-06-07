@@ -6,10 +6,10 @@
 
 ## Architecture
 
-Монорепозиторий пакетов Arch Linux aarch64, оптимизированный под Raspberry Pi 5 (Cortex-A76). Сборка — на нативных ARM64 GitHub-раннерах (`ubuntu-24.04-arm`), хостинг — GitHub Pages (gh-pages branch).
+Монорепозиторий пакетов Arch Linux aarch64, оптимизированный под Raspberry Pi 5 (Cortex-A76). Сборка — на нативных ARM64 GitHub-раннерах (`ubuntu-24.04-arm`), хостинг — удалённый сервер (`dryam.ru`).
 
 Репозиторий: `github:dryamovvv/pkgs`
-URL репозитория pacman: `https://dryamovvv.github.io/pkgs/aarch64`
+URL репозитория pacman: `http://dryam.ru/aarch64`
 
 ## Структура
 
@@ -21,7 +21,7 @@ pkgs/
 │   └── ...
 ├── ci/
 │   ├── build-package.sh   # Сборка в контейнере (pacman-key, ccache, makepkg)
-│   ├── deploy-package.sh   # Деплой в gh-pages с retry-based push
+│   ├── deploy-package.sh   # Деплой через SSH/SCP с flock-блокировкой
 │   └── detect-changes.sh  # Детект изменённых пакетов
 ├── .github/workflows/
 │   └── build.yml          # CI: detect → build matrix + deploy
@@ -61,7 +61,7 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
    - Docker `lfdevs/archlinuxarm:base-devel` + `docker cp` (артефакты видны на хосте)
    - Кэши: Docker image, pacman, ccache (по PKGBUILD hash), Cargo (по PKGBUILD hash)
    - Сборка `makepkg -s --noconfirm` с RPi5 CFLAGS/CXXFLAGS/LDFLAGS + ccache
-   - Деплой: `deploy-package.sh` внутри контейнера → git push в gh-pages с retry-loop
+   - Деплой: `deploy-package.sh` внутри контейнера → SCP + flock атомарный деплой на удалённый сервер с retry-loop
 
 Особенности:
 
@@ -71,24 +71,26 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
 - `concurrency: deploy-${{ github.ref }}` — сериализует деплой, но не отменяет
 - `fail-fast: false` — один упавший пакет не отменяет остальные
 - tmate-отладка через `workflow_dispatch` с `debug_enabled: true`
-- Деплой через git push в gh-pages (не actions/deploy-pages)
+- Деплой через SCP + flock на удалённый сервер с детекцией конфликтов
 
 ## deploy-package.sh
 
 Retry-based (10 попыток) деплой внутри arch-контейнера:
 
-1. Настраивает git credential helper (GITHUB_TOKEN не светится в process args)
-2. Клонирует gh-pages (или создаёт orphan branch если не существует)
-3. Копирует пакет, `repo-add -R` для обновления базы
+1. SCP пакета в staging-директорию на роутере
+2. Скачивает текущую базу repo.db с роутера (под flock)
+3. `repo-add -R` локально в контейнере (Arch имеет pacman)
 4. Генерирует index.html с HTML-эскейпингом
-5. `git push origin gh-pages` — при конфликте (другой job задеплоил) sleep 3s + retry
+5. SCP обновлённой базы + index.html в staging
+6. `flock` + md5sum-detection: атомарный mv в repo-директорию
+7. При конфликте (другой job изменил базу) — sleep 3s + retry
 
 ## Конфигурация pacman на RPi5
 
 ```ini
 [custom-repo]
 SigLevel = Optional TrustedOnly
-Server = https://dryamovvv.github.io/pkgs/aarch64
+Server = http://dryam.ru/aarch64
 ```
 
 ## Добавление пакета
@@ -104,7 +106,7 @@ Server = https://dryamovvv.github.io/pkgs/aarch64
 
 ## CI настройки
 
-GitHub Pages: Source = **Deploy from a branch** → `gh-pages`. Не "GitHub Actions".
+Деплой на удалённый сервер: роутер Keenetic (`dryam.ru:222`), файлы на `/dev/sda1`, веб-сервер lighttpd на порту 80.
 
 ## Пакеты
 

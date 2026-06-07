@@ -2,7 +2,7 @@
 
 Монорепозиторий пакетов Arch Linux, оптимизированных под **Raspberry Pi 5** (Cortex-A76, ARMv8.2-A).
 
-Сборка — на нативных ARM64 GitHub-раннерах (`ubuntu-24.04-arm`), хостинг — GitHub Pages.
+Сборка — на нативных ARM64 GitHub-раннерах (`ubuntu-24.04-arm`), хостинг — удалённый сервер.
 
 ## Подключение репозитория на RPi5
 
@@ -10,7 +10,7 @@
 # /etc/pacman.conf — добавьте в конец:
 [custom-repo]
 SigLevel = Optional TrustedOnly
-Server = https://dryamovvv.github.io/pkgs/aarch64
+Server = http://dryam.ru/aarch64
 ```
 
 ```bash
@@ -56,7 +56,7 @@ pkgs/
 │   └── ...
 ├── ci/
 │   ├── build-package.sh   # Сборка в контейнере (ccache, makepkg)
-│   ├── deploy-package.sh   # Деплой в gh-pages с retry
+│   ├── deploy-package.sh   # Деплой на сервер через SSH/SCP с flock-блокировкой
 │   └── detect-changes.sh  # Детект изменённых пакетов
 ├── .github/workflows/
 │   └── build.yml          # CI/CD: detect → build+deploy matrix
@@ -66,7 +66,7 @@ pkgs/
 ## CI
 
 - **Кэши:** Docker image, pacman, ccache (по PKGBUILD hash), Cargo
-- **Деплой:** git push в gh-pages с retry при конфликтах
+- **Деплой:** SCP + flock атомарный деплой на удалённый сервер с детекцией конфликтов
 - **Отладка:** tmate SSH через `workflow_dispatch` с `debug_enabled: true`
 - **Таймаут:** 90 мин на сборку
 

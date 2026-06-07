@@ -72,7 +72,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             A new package addition request was opened:
 
@@ -114,7 +114,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             A package modification request was opened:
 
@@ -155,7 +155,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             A package removal request was opened:
 
@@ -190,7 +190,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             A user commented on issue #${{ github.event.issue.number }}:
 
@@ -223,7 +223,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             A PR needs code review:
 
@@ -259,7 +259,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: ${{ github.event.issue.body || github.event.comment.body || github.event.pull_request.body }}
 
   auto-fix-runner:
@@ -294,7 +294,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             The CI build for one or more packages has failed.
 

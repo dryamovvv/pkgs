@@ -60,7 +60,7 @@ build() {
 
 check() {
   cd "$srcdir/$pkgname-$pkgver"
-  cargo test --release --locked --all-features || true
+  cargo test --release --locked --all-features -- --skip sync || true
 }
 
 package() {

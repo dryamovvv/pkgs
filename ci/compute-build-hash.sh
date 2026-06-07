@@ -47,16 +47,16 @@ else
 	cat /tmp/ci_sums_$$.txt >>"$TMP_IN"
 fi
 
+# Determine repo root early (needed for CI files and local source resolution)
+REPO_ROOT=""
+if git rev-parse --show-toplevel >/dev/null 2>&1; then
+	REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
+fi
+
 # For local source files, compute their sha256 and include
 # This ensures sources that reference repo-local files (patches, extras) are accounted for
 echo "---LOCAL_SOURCE_FILES---" >>"$TMP_IN"
 if [ -s /tmp/ci_sources_$$.txt ]; then
-	# determine repo root if available to search referenced files outside package dir
-	REPO_ROOT=""
-	if git rev-parse --show-toplevel >/dev/null 2>&1; then
-		REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
-	fi
-
 	while IFS= read -r src; do
 		[ -z "$src" ] && continue
 		# ignore URLs (scheme)

@@ -226,7 +226,7 @@ jobs:
 
   deploy-packages:
     needs: build-packages-matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     if: needs.build-packages-matrix.result == 'success'
     steps:
       - name: Checkout repository

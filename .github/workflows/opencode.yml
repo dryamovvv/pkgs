@@ -57,6 +57,7 @@ jobs:
     permissions:
       id-token: write
       contents: write
+      pull-requests: write
       issues: write
     concurrency:
       group: auto-fix-${{ github.ref }}

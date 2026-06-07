@@ -25,14 +25,12 @@ options=('!strip')
 source=("linux-$pkgver-${_commit:0:10}.tar.gz::https://github.com/raspberrypi/linux/archive/${_commit}.tar.gz"
         cmdline.txt
         config.txt
-        0001-Make-proc-cpuinfo-consistent-on-arm64-and-arm.patch
         linux.preset
         archarm.diffconfig
 )
 sha256sums=('04c1b5d7f418430533429575db04f425802e184bcc924c78f002eb22fabb2b8a'
             '7a84795f7c7a39e8384356ef51f47d5ddac0e44921d1bd2cbf8db7de88810ef5'
             '624a2057aa5e11624e69781c3bd5f3641134266e65f15404577b2857a509db4c'
-            'a5aa80f3aa907f8d00f206ef0b760b1b045068ea558bdf60be481abe95b650f1'
             '184ee4f680eb32c99f159773b711cff200426cec7a565bd04711558ca74c381e'
             '900428fdd68463197ffd853d12fa93ad7bf879a384b3462fe8430f7377524765')
 
@@ -41,9 +39,6 @@ _kernel=kernel8.img KARCH=arm64 _image=Image _config=config8
 
 prepare() {
   cd "${srcdir}/${_srcname}"
-
-  # consistent behavior of lscpu on arm/arm64
-  patch -p1 -i ../0001-Make-proc-cpuinfo-consistent-on-arm64-and-arm.patch
 
   echo "Setting version..."
   echo "-$pkgrel" > localversion.10-pkgrel

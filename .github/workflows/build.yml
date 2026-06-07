@@ -52,6 +52,7 @@ jobs:
         run: |
           chmod +x ci/compute-build-hash.sh
           BUILD_HASH=$(ci/compute-build-hash.sh packages/${{ matrix.pkg }})
+          echo "Computed build_hash=$BUILD_HASH"
           echo "build_hash=$BUILD_HASH" >> $GITHUB_OUTPUT
 
       - name: Restore built package cache
@@ -60,6 +61,11 @@ jobs:
         with:
           path: /tmp/build-cache/${{ matrix.pkg }}
           key: build-artifact-${{ matrix.pkg }}-${{ steps.compute-hash.outputs.build_hash }}
+
+      - name: Show build cache info
+        run: |
+          echo "build_cache_key=build-artifact-${{ matrix.pkg }}-${{ steps.compute-hash.outputs.build_hash }}"
+          echo "built_cache_hit=${{ steps.built-cache.outputs.cache-hit }}"
 
       - name: Use cached build artifact
         if: steps.built-cache.outputs.cache-hit == 'true'
@@ -74,6 +80,11 @@ jobs:
         with:
           path: /tmp/docker-image.tar
           key: docker-archlinuxarm-v2-${{ hashFiles('.github/workflows/build.yml') }}
+
+      - name: Show docker cache info
+        run: |
+          echo "docker_cache_key=docker-archlinuxarm-v2-${{ hashFiles('.github/workflows/build.yml') }}"
+          echo "docker_cache_hit=${{ steps.docker-cache.outputs.cache-hit }}"
 
       - name: Pull Docker image
         if: steps.docker-cache.outputs.cache-hit != 'true'
@@ -95,11 +106,17 @@ jobs:
 
       # ── ccache ──
       - name: Cache ccache
+        id: ccache-cache
         uses: actions/cache@v5
         with:
           path: /tmp/ccache
           key: ccache-v2-${{ matrix.pkg }}-${{ hashFiles(format('packages/{0}/PKGBUILD', matrix.pkg)) }}
           restore-keys: ccache-v2-${{ matrix.pkg }}-
+
+      - name: Show ccache info
+        run: |
+          echo "ccache_key=ccache-v2-${{ matrix.pkg }}-${{ hashFiles(format('packages/{0}/PKGBUILD', matrix.pkg)) }}"
+          echo "ccache_hit=${{ steps.ccache-cache.outputs.cache-hit }}"
 
       # ── Cargo cache (Rust) ──
       - name: Cache Cargo

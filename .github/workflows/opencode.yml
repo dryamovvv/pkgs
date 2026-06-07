@@ -179,7 +179,8 @@ jobs:
       - name: Run opencode (new-package comment)
         if: |
           github.event_name == 'issue_comment' &&
-          !contains(github.event.comment.body, 'opencode[bot]')
+          !contains(github.event.comment.body, 'opencode[bot]') &&
+          contains(github.event.issue.labels.*.name, 'new-package')
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -245,10 +246,10 @@ jobs:
                `gh pr review ${{ github.event.pull_request.number }} --request-changes`
                List specific issues and suggested fixes.
 
-      - name: Run opencode (default)
+      - name: Run opencode (default — non-issue events)
         if: |
           steps.mode.outputs.mode == 'unknown' ||
-          (github.event_name == 'issues' && !contains(github.event.issue.labels.*.name, 'new-package') && !contains(github.event.issue.labels.*.name, 'modify-package') && !contains(github.event.issue.labels.*.name, 'remove-package'))
+          (github.event_name != 'issues' && github.event_name != 'issue_comment' && github.event_name != 'pull_request' && github.event_name != 'pull_request_review_comment')
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}

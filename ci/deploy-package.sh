@@ -24,8 +24,11 @@ REMOTE="$SSH_USER@$SSH_HOST"
 
 cd /workspace
 
-# Find package file
+# Find package file (absolute path)
 PKGFILE=$(find "$PKGDIR" -maxdepth 1 -name '*.pkg.tar.*' -type f 2>/dev/null | head -1)
+if [ -n "$PKGFILE" ]; then
+	PKGFILE="/workspace/$PKGFILE"
+fi
 echo "DEBUG: PKGDIR=$PKGDIR"
 echo "DEBUG: find output: $PKGFILE"
 echo "DEBUG: ls -la $PKGDIR:"

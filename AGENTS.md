@@ -1,5 +1,9 @@
 # Arch Linux aarch64 Package Repository
 
+<!-- Always use the superpowers skill for structured workflows -->
+<!-- Use Context7 for documentation lookups -->
+<!-- Use Exa for web search queries -->
+
 ## Architecture
 
 Монорепозиторий пакетов Arch Linux aarch64, оптимизированный под Raspberry Pi 5 (Cortex-A76). Сборка — на нативных ARM64 GitHub-раннерах (`ubuntu-24.04-arm`), хостинг — GitHub Pages (gh-pages branch).
@@ -101,3 +105,15 @@ Server = https://dryamovvv.github.io/pkgs/aarch64
 ## CI настройки
 
 GitHub Pages: Source = **Deploy from a branch** → `gh-pages`. Не "GitHub Actions".
+
+## Пакеты
+
+| Пакет      | Описание                                   | Версия |
+| ---------- | ------------------------------------------ | ------ |
+| arch-opsd  | systemd service manager                    | latest |
+| atuin      | Shell history with sync                    | latest |
+| bat        | cat(1) clone with wings                    | 0.26.1 |
+| helix      | Modal terminal-based text editor           | latest |
+| kmscon     | KMS/DRM-based virtual console              | latest |
+| mozillavpn | Fast, secure VPN by Mozilla                | latest |
+| zellij     | Terminal workspace with batteries included | 0.44.3 |

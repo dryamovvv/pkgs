@@ -69,3 +69,15 @@ pkgs/
 - **Деплой:** git push в gh-pages с retry при конфликтах
 - **Отладка:** tmate SSH через `workflow_dispatch` с `debug_enabled: true`
 - **Таймаут:** 90 мин на сборку
+
+## Пакеты
+
+| Пакет      | Описание                                   | Версия |
+| ---------- | ------------------------------------------ | ------ |
+| arch-opsd  | systemd service manager                    | latest |
+| atuin      | Shell history with sync                    | latest |
+| bat        | cat(1) clone with wings                    | 0.26.1 |
+| helix      | Modal terminal-based text editor           | latest |
+| kmscon     | KMS/DRM-based virtual console              | latest |
+| mozillavpn | Fast, secure VPN by Mozilla                | latest |
+| zellij     | Terminal workspace with batteries included | 0.44.3 |

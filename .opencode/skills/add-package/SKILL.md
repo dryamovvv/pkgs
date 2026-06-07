@@ -212,16 +212,22 @@ mkdir packages/<pkg-name>
 git add packages/<pkg-name>
 git commit -m "feat: add <pkg-name> <version>"
 git push
-````
+```
 
-### 5. Monitor CI until full success
+### 5. Update AGENTS.md and README.md
+
+Add the new package to the package registry in both `AGENTS.md` and `README.md` at the `## Packages` section. Always keep the list sorted alphabetically.
+
+Format: `| <pkg-name> | <one-line description> | <version> |`
+
+### 6. Monitor CI until full success
 
 **Do not stop until the package is built and deployed.** After `git push`:
 
 1. Watch progress: `gh run watch`
 2. If build fails — read logs: `gh run view <run-id> --log --job=<job-id>`
 3. Fix the error in PKGBUILD/patches, commit `fix: ...`, push
-4. Go back to step 1
+5. Go back to step 1
 5. Stop only when all three jobs (`detect`, `build`, `deploy`) are **success**
 
 **Success checklist:**
@@ -237,4 +243,5 @@ git push
 
 User: "add yazi"
 
-Response: research yazi → find its build options → ask user about each → create PKGBUILD → commit → push → monitor CI until deployed.
+Response: research yazi → find its build options → ask user about each → create PKGBUILD → update AGENTS.md and README.md → commit → push → monitor CI until deployed.
+````

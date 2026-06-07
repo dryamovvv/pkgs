@@ -1,0 +1,15 @@
+[Unit]
+Description=Arch Linux MCP Server (HTTP)
+Documentation=https://github.com/dryamovvv/arch-mcp
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/arch-opsd http
+Restart=on-failure
+RestartSec=5
+SyslogIdentifier=arch-opsd
+
+[Install]
+WantedBy=multi-user.target

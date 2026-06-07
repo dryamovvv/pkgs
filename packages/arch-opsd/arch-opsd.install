@@ -1,0 +1,19 @@
+post_install() {
+    echo "Enabling and starting arch-opsd..."
+    systemctl daemon-reload
+    systemctl enable --now arch-opsd.service
+    echo "arch-opsd is now running on http://localhost:8080"
+}
+
+pre_remove() {
+    echo "Stopping arch-opsd..."
+    systemctl stop arch-opsd.service 2>/dev/null || true
+    systemctl disable arch-opsd.service 2>/dev/null || true
+}
+
+post_upgrade() {
+    echo "Restarting arch-opsd..."
+    systemctl daemon-reload
+    systemctl restart arch-opsd.service
+    echo "arch-opsd restarted."
+}

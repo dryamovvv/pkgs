@@ -23,7 +23,7 @@ on:
         type: string
 
 jobs:
-  opencode:
+  opencode-analysis:
     if: |
       github.event_name != 'workflow_dispatch' &&
       !contains(github.event.issue.labels.*.name, 'ci-failure')
@@ -57,7 +57,7 @@ jobs:
           use_github_token: true
           prompt: ${{ github.event.issue.body || github.event.comment.body }}
 
-  auto-fix:
+  auto-fix-runner:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15

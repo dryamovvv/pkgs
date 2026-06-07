@@ -19,6 +19,7 @@ fi
 chmod 600 "$SSH_KEY"
 
 SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o Port=$SSH_PORT"
+SCP_OPTS="-O $SSH_OPTS"
 REMOTE="$SSH_USER@$SSH_HOST"
 
 cd /workspace
@@ -54,7 +55,7 @@ for attempt in $(seq 1 10); do
 
 	# ── 1. SCP new package to staging ──
 	echo "scp: $PKGFILE ($(stat -c%s "$PKGFILE") bytes)"
-	if ! scp $SSH_OPTS "$PKGFILE" "$REMOTE:$STAGING/" 2>&1; then
+	if ! scp $SCP_OPTS "$PKGFILE" "$REMOTE:$STAGING/" 2>&1; then
 		echo "SCP failed (exit=$?), retrying..."
 		sleep 3
 		rm -rf "$WORKDIR"
@@ -79,14 +80,14 @@ for attempt in $(seq 1 10); do
 	}
 
 	if [ "$DB_EXISTS" = "YES" ]; then
-		scp $SSH_OPTS "$REMOTE:$STAGING/db_current.tar.gz" "$WORKDIR/repo.db.tar.gz" || {
+		scp $SCP_OPTS "$REMOTE:$STAGING/db_current.tar.gz" "$WORKDIR/repo.db.tar.gz" || {
 			echo "Failed to download repo DB, retrying..."
 			sleep 3
 			rm -rf "$WORKDIR"
 			continue
 		}
 		DB_MD5=$(md5sum "$WORKDIR/repo.db.tar.gz" | cut -d' ' -f1)
-		scp $SSH_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_current.tar.gz" 2>/dev/null || true
+		scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_current.tar.gz" 2>/dev/null || true
 		cp "$PKGFILE" "$WORKDIR/"
 		(cd "$WORKDIR" && repo-add -R repo.db.tar.gz "$PKGNAME" 2>/dev/null) || true
 	else
@@ -114,11 +115,11 @@ for attempt in $(seq 1 10); do
 	} >"$WORKDIR/index.html"
 
 	# ── 4. SCP updated files to staging ──
-	scp $SSH_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_new.tar.gz" 2>/dev/null || true
-	scp $SSH_OPTS "$WORKDIR/repo.db.tar.gz.old" "$REMOTE:$STAGING/db_old.tar.gz" 2>/dev/null || true
-	scp $SSH_OPTS "$WORKDIR/repo.files.tar.gz" "$REMOTE:$STAGING/db_files.tar.gz" 2>/dev/null || true
-	scp $SSH_OPTS "$WORKDIR/repo.files.tar.gz.old" "$REMOTE:$STAGING/db_files_old.tar.gz" 2>/dev/null || true
-	scp $SSH_OPTS "$WORKDIR/index.html" "$REMOTE:$STAGING/" 2>/dev/null || true
+	scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz" "$REMOTE:$STAGING/db_new.tar.gz" 2>/dev/null || true
+	scp $SCP_OPTS "$WORKDIR/repo.db.tar.gz.old" "$REMOTE:$STAGING/db_old.tar.gz" 2>/dev/null || true
+	scp $SCP_OPTS "$WORKDIR/repo.files.tar.gz" "$REMOTE:$STAGING/db_files.tar.gz" 2>/dev/null || true
+	scp $SCP_OPTS "$WORKDIR/repo.files.tar.gz.old" "$REMOTE:$STAGING/db_files_old.tar.gz" 2>/dev/null || true
+	scp $SCP_OPTS "$WORKDIR/index.html" "$REMOTE:$STAGING/" 2>/dev/null || true
 
 	# ── 5. Atomic deploy with flock + conflict detection ──
 	DEPLOY_RESULT=$(

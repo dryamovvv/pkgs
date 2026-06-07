@@ -89,6 +89,7 @@ pkgs/
 | just       | Command runner                               | 1.51.0  |
 | just-lsp   | Language server for just                     | 0.4.5   |
 | kmscon     | KMS/DRM-based virtual console                | latest  |
+| marksman   | Markdown LSP server                          | latest  |
 | mdv        | Browser-quality Markdown viewer for terminal | 0.1.1   |
 | mozillavpn | Fast, secure VPN by Mozilla                  | latest  |
 | procs      | Modern replacement for ps                    | 0.14.11 |

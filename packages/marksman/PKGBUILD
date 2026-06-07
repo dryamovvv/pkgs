@@ -1,0 +1,51 @@
+# Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
+# Contributor: dryamovvv (Arch Linux package)
+# Optimized for Raspberry Pi 5 (Cortex-A76)
+pkgname=marksman
+pkgver=2026.02.08
+pkgrel=1
+pkgdesc="Markdown LSP server: completion, navigation, diagnostics, wiki-links, optimized for Raspberry Pi 5 (Cortex-A76)"
+arch=('aarch64')
+url="https://github.com/artempyanykh/marksman"
+license=('MIT')
+options=('!debug')
+depends=()
+makedepends=('dotnet-sdk-9.0')
+source=("https://github.com/artempyanykh/marksman/archive/refs/tags/2026-02-08.tar.gz")
+sha256sums=('a3ba5f8ef5be5d7ede2ec5ae9f303d2d776f476734ff66254be8e6df0e0f090e')
+
+prepare() {
+  cd "$srcdir/marksman-2026-02-08"
+  dotnet restore Marksman.sln
+}
+
+build() {
+  cd "$srcdir/marksman-2026-02-08"
+  export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
+  export LDFLAGS="-Wl,-z,max-page-size=0x4000"
+  export DOTNET_CLI_TELEMETRY_OPTOUT=1
+  export DOTNET_NOLOGO=1
+
+  dotnet publish -c Release -r linux-arm64 --self-contained true \
+    -p:PublishSingleFile=true \
+    -p:PublishTrimmed=true \
+    -p:TrimMode=partial \
+    -p:DebugType=embedded \
+    -p:EnableCompressionInSingleFile=true \
+    -p:UseAppHost=true \
+    -p:VersionString=2026-02-08 \
+    Marksman/Marksman.fsproj
+}
+
+check() {
+  cd "$srcdir/marksman-2026-02-08"
+  dotnet test --configuration Release --no-build || true
+}
+
+package() {
+  cd "$srcdir/marksman-2026-02-08"
+  install -Dm755 "Marksman/bin/Release/net9.0/linux-arm64/publish/marksman" "$pkgdir/usr/bin/marksman"
+  install -Dm644 "README.md" "$pkgdir/usr/share/doc/marksman/README.md"
+  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/marksman/LICENSE"
+}

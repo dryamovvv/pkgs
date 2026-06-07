@@ -11,13 +11,10 @@ COMMIT_SHORT="$(echo "$COMMIT_SHA" | cut -c1-7)"
 FAILED_PKGS=""
 
 for PKG in $(echo "$PACKAGES_JSON" | jq -r '.[]'); do
-  JOBS=$(gh api "repos/${REPO}/actions/runs/current/jobs" --jq ".jobs[] | select(.name | test(\"${PKG}\")) | .conclusion" 2>/dev/null || echo "")
-  if echo "$JOBS" | grep -q "failure"; then
-    FAILED_PKGS="$FAILED_PKGS $PKG"
-  fi
+  FAILED_PKGS="$FAILED_PKGS $PKG"
 done
 
-if [ -z "$FAILED_PKGS" ]; then
+if [ -z "$(echo "$FAILED_PKGS" | tr -d ' ')" ]; then
   FAILED_PKGS=$(echo "$PACKAGES_JSON" | jq -r '.[]' | tr '\n' ' ')
 fi
 
@@ -27,7 +24,7 @@ for PKG in $FAILED_PKGS; do
   EXISTING=$(gh issue list \
     --repo "${REPO}" \
     --label ci-failure \
-    --search "CI Failure: ${PKG}" \
+    --search "CI Failure: ${PKG} in:title" \
     --state open \
     --json number \
     --jq '.[0].number' 2>/dev/null || echo "")
@@ -73,7 +70,7 @@ EOF
     )"
   else
     echo "No existing issue for ${PKG}, creating new one"
-    EXISTING=$(gh issue create \
+    ISSUE_URL=$(gh issue create \
       --repo "${REPO}" \
       --title "CI Failure: ${PKG}" \
       --body "$(
@@ -91,8 +88,8 @@ opencode will attempt to auto-fix this issue.
 EOF
       )" \
       --label "ci-failure" \
-      --label "fix-attempt-1" \
-      --jq '.number')
+      --label "fix-attempt-1")
+    EXISTING=$(echo "$ISSUE_URL" | grep -oP '\d+$')
   fi
 
   gh issue edit "$EXISTING" --repo "${REPO}" --add-label "fix-attempt-${ATTEMPT}"

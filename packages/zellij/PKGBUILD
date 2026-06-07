@@ -23,7 +23,7 @@ optdepends=(
   'fish: fish shell integration'
 )
 source=("https://github.com/zellij-org/zellij/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('c5f4f800b59fa23a4d9ba89ec49c66f7a7281748b34c768869841b9b48e301be')
+sha256sums=('33ae61fc802b59462fed49b424893596d3aa819646bdce53d5602f714c1264fe')
 
 prepare() {
   cd "$srcdir/$pkgname-$pkgver"

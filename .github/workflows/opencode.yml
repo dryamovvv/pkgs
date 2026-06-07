@@ -44,6 +44,7 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
         with:
           model: opencode-go/glm-5.1
           share: true
@@ -73,6 +74,7 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
         with:
           model: opencode-go/glm-5.1
           share: true

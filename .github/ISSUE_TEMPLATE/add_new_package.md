@@ -1,7 +1,7 @@
 ---
 name: Add new package
 about: Request a new package to be added to the repository
-title: "[PACKAGE] "
+title: "Add [PACKAGE] "
 labels: new-package
 assignees: ""
 ---
@@ -21,7 +21,10 @@ No
 **Create README.md**
 Yes
 
-**Create AGENT.md**
+**Create AGENTS.md**
+Yes
+
+**Optimization flags for rpi5 16k from README.md**
 Yes
 
 **Additional comments**

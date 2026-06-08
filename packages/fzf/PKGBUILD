@@ -68,4 +68,3 @@ package() {
 
   install -Dm644 shell/common.sh "$pkgdir/usr/share/fzf/shell/common.sh"
 }
-broken!!!

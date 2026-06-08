@@ -42,6 +42,10 @@ for pkgdir in packages/*/; do
 	pkgver_norm=$(normalize "$pkgver")
 	latest_norm=$(normalize "$latest_ver")
 
+	# Normalize pre-release suffixes: 0.1.0rc1 ↔ 0.1.0-rc1
+	pkgver_norm=$(echo "$pkgver_norm" | sed -E 's/([0-9])(rc|alpha|beta|pre)([0-9])/\1-\2\3/g')
+	latest_norm=$(echo "$latest_norm" | sed -E 's/([0-9])(rc|alpha|beta|pre)([0-9])/\1-\2\3/g')
+
 	if [ "$latest_norm" = "$pkgver_norm" ]; then
 		echo "OK   $pkg: $pkgver (latest)"
 	elif [ -n "$latest_norm" ]; then

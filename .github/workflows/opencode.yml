@@ -46,6 +46,11 @@ jobs:
           git config user.name "opencode[bot]"
           git config user.email "opencode[bot]@users.noreply.github.com"
 
+      - name: Configure git credentials
+        run: |
+          git config --global credential.helper store
+          echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+
       - name: Install uv (for arch-mcp)
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh

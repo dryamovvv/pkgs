@@ -46,6 +46,10 @@ jobs:
           git config user.name "opencode[bot]"
           git config user.email "opencode[bot]@users.noreply.github.com"
 
+      - name: Clean git HTTP extra headers (avoid duplicate Auth)
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
+
       - name: Resolve run mode
         id: mode
         run: |
@@ -72,7 +76,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: true
+          use_github_token: false
           prompt: |
             A new package addition request was opened:
 
@@ -114,7 +118,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: true
+          use_github_token: false
           prompt: |
             A package modification request was opened:
 
@@ -155,7 +159,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: true
+          use_github_token: false
           prompt: |
             A package removal request was opened:
 
@@ -190,7 +194,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: true
+          use_github_token: false
           prompt: |
             A user commented on issue #${{ github.event.issue.number }}:
 
@@ -223,7 +227,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: true
+          use_github_token: false
           prompt: |
             A PR needs code review:
 
@@ -259,7 +263,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: true
+          use_github_token: false
           prompt: ${{ github.event.issue.body || github.event.comment.body || github.event.pull_request.body }}
 
   auto-fix-runner:
@@ -294,7 +298,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: true
+          use_github_token: false
           prompt: |
             The CI build for one or more packages has failed.
 

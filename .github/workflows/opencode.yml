@@ -46,10 +46,9 @@ jobs:
           git config user.name "opencode[bot]"
           git config user.email "opencode[bot]@users.noreply.github.com"
 
-      - name: Configure git credentials
+      - name: Clear checkout auth header (prevents duplicate with opencode)
         run: |
-          git config --global credential.helper store
-          echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
 
       - name: Install uv (for arch-mcp)
         run: |

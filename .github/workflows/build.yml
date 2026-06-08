@@ -297,4 +297,4 @@ jobs:
             "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             "${{ github.sha }}" \
             "${{ github.run_id }}" \
-            '${{ needs.detect-changed-packages.outputs.matrix }}' || echo "report-failure.sh exited with $?"
+            ${{ needs.detect-changed-packages.outputs.matrix }} || echo "report-failure.sh exited with $?"

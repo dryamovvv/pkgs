@@ -54,7 +54,7 @@ for pkgdir in packages/*/; do
 				--body "**Package:** $pkg
 **Current version:** $pkgver
 **New version:** $latest_ver
-**Source:** https://github.com/$source_url/releases/latest" 2>/dev/null || true
+**Source:** https://github.com/$source_url/releases/latest" || echo "WARN: failed to create issue for $pkg"
 		fi
 	fi
 done

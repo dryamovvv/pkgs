@@ -73,8 +73,9 @@ jobs:
 
             1. Extract package name from issue.
             2. Research: find upstream repo, latest release tag, build system.
-               Check AUR (aur.archlinux.org) for existing PKGBUILD as reference.
-               Use Context7 and web search.
+               Use arch-mcp (search_aur, search_archwiki, get_official_package_info)
+               to find existing PKGBUILDs as reference.
+               Use Context7 for build system docs. Use web search for missing info.
             3. Create branch: add-package/{name}
             4. Write packages/{name}/PKGBUILD:
                - Enable ALL features, tests=disabled, debug=stripped, docs=enabled

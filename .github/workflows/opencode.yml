@@ -216,8 +216,8 @@ jobs:
         if: github.event.action == 'opened'
         env:
           GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          BRANCH="${{ github.event.pull_request.head.ref }}"
           if echo "$BRANCH" | grep -qE '^(add-package|modify-package|remove-package|auto-fix)/'; then
             echo "Auto-approving AI-generated PR: $BRANCH"
             gh pr review ${{ github.event.pull_request.number }} --approve \

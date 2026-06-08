@@ -177,12 +177,7 @@ jobs:
           # Mount only the package directory and ci scripts into the container to avoid copying the whole repo
           # Ensure updpkgsums is available inside the container to allow automated checksum updates
           docker exec builder pacman -Sy --noconfirm updpkgsums || true
-          docker exec \
-            builder bash -c "cd /workspace && ci/build-package.sh ${{ matrix.pkg }}"
-          # GPG signing temporarily disabled — see issues with build-package.sh GPG setup
-          # -e GPG_KEY="${{ secrets.GPG_KEY_ID }}" \
-          # -e GPG_IMPORT="${{ secrets.GPG_PRIVATE_KEY }}" \
-          # -e GPG_PASSPHRASE="${{ secrets.GPG_PASSPHRASE }}" \
+          docker exec builder bash -c "cd /workspace && ci/build-package.sh ${{ matrix.pkg }}"
 
       - name: Fix cargo cache permissions
         if: always()

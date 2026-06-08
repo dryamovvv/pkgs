@@ -200,6 +200,35 @@ jobs:
             If you can implement the requested change — create a branch, make the changes, and open a PR.
             Comment on the issue with your response or questions.
 
+      - name: Run opencode (issue comment — generic)
+        if: |
+          github.event_name == 'issue_comment' &&
+          !contains(github.event.comment.body, 'opencode[bot]') &&
+          !contains(github.event.issue.labels.*.name, 'new-package') &&
+          !contains(github.event.issue.labels.*.name, 'ci-failure')
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        with:
+          model: opencode/deepseek-v4-flash-free
+          share: true
+          use_github_token: true
+          prompt: |
+            A user commented on issue #${{ github.event.issue.number }}:
+
+            **Issue title:** ${{ github.event.issue.title }}
+            **Comment:**
+            ${{ github.event.comment.body }}
+
+            ## Your task
+
+            1. Read the issue and all comments to understand the full conversation.
+            2. Respond helpfully. If a feature/change is requested, implement it if possible.
+            3. Comment on the issue with your response.
+
       - name: Run opencode (new-package comment)
         if: |
           github.event_name == 'issue_comment' &&

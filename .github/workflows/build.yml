@@ -289,6 +289,7 @@ jobs:
       - name: Create or update failure issue
         env:
           GH_TOKEN: ${{ github.token }}
+          FAILED_PACKAGES: ${{ needs.detect-changed-packages.outputs.matrix }}
         run: |
           set -x
           chmod +x ci/report-failure.sh
@@ -297,4 +298,4 @@ jobs:
             "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             "${{ github.sha }}" \
             "${{ github.run_id }}" \
-            ${{ needs.detect-changed-packages.outputs.matrix }} || echo "report-failure.sh exited with $?"
+            "$FAILED_PACKAGES" || echo "report-failure.sh exited with $?"

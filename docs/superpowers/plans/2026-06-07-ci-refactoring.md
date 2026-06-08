@@ -10,6 +10,8 @@
 
 ---
 
+## Header
+
 ### Task 1: Fix Docker image cache — skip pull on cache hit ✅
 
 **Status:** DONE — build.yml splits pull/load into separate steps with `cache-hit` condition.

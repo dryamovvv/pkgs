@@ -198,13 +198,22 @@ jobs:
              4. Comment on the issue with your response.
 
   opencode-review:
-    if: github.event_name == 'pull_request' && github.event.action == 'opened'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
+      id-token: write
       contents: read
       pull-requests: write
+      issues: read
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
       - name: Auto-approve AI-generated PRs
+        if: github.event.action == 'opened'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
@@ -217,6 +226,37 @@ jobs:
           else
             echo "Skipping auto-approve for branch: $BRANCH"
           fi
+
+      - name: Run opencode PR review
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        with:
+          model: opencode/deepseek-v4-flash-free
+          share: true
+          use_github_token: true
+          token: ${{ secrets.GH_PAT }}
+          prompt: |
+            A PR needs code review:
+
+            **PR:** ${{ github.event.pull_request.html_url }}
+            **Title:** ${{ github.event.pull_request.title }}
+            **Branch:** ${{ github.event.pull_request.head.ref }}
+
+            ## Your task
+
+            1. Review the PR diff: `gh pr diff ${{ github.event.pull_request.number }}`
+            2. Check:
+               - PKGBUILD syntax, completeness, correct RPi5 Cortex-A76 flags
+               - All features properly enabled as described in PR body or issue
+               - sha256sums present and look correct
+               - AGENTS.md and README.md present and accurate
+               - No obvious build issues
+            3. If issues found — submit a review with changes requested using `gh pr review`
+            4. If OK — submit an approving review via `gh pr review --approve`
 
   auto-fix-runner:
     if: github.event_name == 'workflow_dispatch'

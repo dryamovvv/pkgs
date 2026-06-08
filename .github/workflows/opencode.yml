@@ -212,21 +212,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Auto-approve AI-generated PRs
-        if: github.event.action == 'opened'
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-        run: |
-          BRANCH="${{ github.event.pull_request.head.ref }}"
-          if echo "$BRANCH" | grep -qE '^(add-package|modify-package|remove-package|auto-fix)/'; then
-            echo "Auto-approving AI-generated PR: $BRANCH"
-            gh pr review ${{ github.event.pull_request.number }} --approve \
-              --body "LGTM. Automated approval — CI will verify the build." \
-              --repo ${{ github.repository }}
-          else
-            echo "Skipping auto-approve for branch: $BRANCH"
-          fi
-
       - name: Run opencode PR review
         uses: anomalyco/opencode/github@latest
         env:
@@ -237,7 +222,7 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: true
+          use_github_token: false
           prompt: |
             A PR needs code review:
 
@@ -255,7 +240,7 @@ jobs:
                - AGENTS.md and README.md present and accurate
                - No obvious build issues
             3. If issues found — submit a review with changes requested using `gh pr review`
-            4. If OK — no action needed (PR already auto-approved)
+            4. If OK — submit an approving review via `gh pr review --approve`
 
   auto-fix-runner:
     if: github.event_name == 'workflow_dispatch'

@@ -290,7 +290,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          if echo "$BRANCH" | grep -qE '^(add-package|modify-package|remove-package|auto-fix|opencode/dispatch)/'; then
+          if echo "$BRANCH" | grep -qE '^(add-package|modify-package|remove-package|auto-fix|opencode)/'; then
             echo "Auto-approving AI-generated PR: $BRANCH"
             gh pr review ${{ github.event.pull_request.number }} --approve \
               --body "LGTM. Automated approval — CI will verify the build." \

@@ -28,7 +28,7 @@ jobs:
           PR_NUM=$(gh pr list --state open --json number,headRefName,headRefOid --repo $REPO | jq -r '.[] | select(.headRefOid=="'${HEAD_SHA}'") | .number' | head -n1)
           if [ -z "$PR_NUM" ]; then
             echo "No PR found by headRefOid. Searching for open auto-fix/opencode/add-package/modify-package/remove-package PRs and matching head SHA"
-            PR_NUM=$(gh pr list --state open --json number,headRefName,headRefOid --repo $REPO | jq -r '.[] | select(.headRefName|test("^(auto-fix|add-package|modify-package|remove-package|opencode/dispatch)/")) | select(.headRefOid=="'${HEAD_SHA}'") | .number' | head -n1)
+            PR_NUM=$(gh pr list --state open --json number,headRefName,headRefOid --repo $REPO | jq -r '.[] | select(.headRefName|test("^(auto-fix|add-package|modify-package|remove-package|opencode)/")) | select(.headRefOid=="'${HEAD_SHA}'") | .number' | head -n1)
           fi
           if [ -z "$PR_NUM" ]; then
             echo "No matching auto-fix PR found for commit $HEAD_SHA. Exiting."

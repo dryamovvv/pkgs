@@ -53,13 +53,13 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             A new package addition request was opened:
 
@@ -95,13 +95,13 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             A package modification request was opened:
 
@@ -136,13 +136,13 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             A package removal request was opened:
 
@@ -171,13 +171,13 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             A user commented on issue #${{ github.event.issue.number }}:
 
@@ -283,13 +283,13 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
+          use_github_token: true
           prompt: |
             The CI build for one or more packages has failed.
 

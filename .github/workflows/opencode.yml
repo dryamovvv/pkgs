@@ -26,7 +26,8 @@ jobs:
   opencode-analysis:
     if: |
       github.event_name != 'workflow_dispatch' &&
-      !contains(github.event.issue.labels.*.name || github.event.pull_request.labels.*.name || '', 'ci-failure')
+      github.event_name != 'pull_request' &&
+      !contains(github.event.issue.labels.*.name || '', 'ci-failure')
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -44,19 +45,6 @@ jobs:
         run: |
           git config user.name "opencode[bot]"
           git config user.email "opencode[bot]@users.noreply.github.com"
-
-      - name: Resolve run mode
-        id: mode
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.event_name }}" = "pull_request_review_comment" ]; then
-            echo "mode=review" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" = "issue_comment" ]; then
-            echo "mode=comment" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" = "issues" ]; then
-            echo "mode=issue" >> $GITHUB_OUTPUT
-          else
-            echo "mode=unknown" >> $GITHUB_OUTPUT
-          fi
 
       - name: Run opencode (new-package)
         if: |
@@ -207,12 +195,24 @@ jobs:
                - Comment on the issue confirming what was changed
             3. If this is part of the new-package flow and all questions are answered:
                - Follow the add-package skill to create PKGBUILD and open a PR
-            4. Comment on the issue with your response.
+             4. Comment on the issue with your response.
+
+  opencode-review:
+    if: github.event_name == 'pull_request' && github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Auto-approve AI-generated PRs
-        if: |
-          github.event_name == 'pull_request' &&
-          github.event.action == 'opened'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
@@ -226,10 +226,7 @@ jobs:
             echo "Skipping auto-approve for branch: $BRANCH"
           fi
 
-      - name: Run opencode (default — non-issue events)
-        if: |
-          steps.mode.outputs.mode == 'unknown' ||
-          (github.event_name != 'issues' && github.event_name != 'issue_comment' && github.event_name != 'pull_request' && github.event_name != 'pull_request_review_comment')
+      - name: Run opencode PR review
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -239,8 +236,25 @@ jobs:
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
-          use_github_token: false
-          prompt: ${{ github.event.issue.body || github.event.comment.body || github.event.pull_request.body }}
+          use_github_token: true
+          prompt: |
+            A PR needs code review:
+
+            **PR:** ${{ github.event.pull_request.html_url }}
+            **Title:** ${{ github.event.pull_request.title }}
+            **Branch:** ${{ github.event.pull_request.head.ref }}
+
+            ## Your task
+
+            1. Review the PR diff: `gh pr diff ${{ github.event.pull_request.number }}`
+            2. Check:
+               - PKGBUILD syntax, completeness, correct RPi5 Cortex-A76 flags
+               - All features properly enabled as described in PR body or issue
+               - sha256sums present and look correct
+               - AGENTS.md and README.md present and accurate
+               - No obvious build issues
+            3. If issues found — submit a review with changes requested using `gh pr review`
+            4. If OK — no action needed (PR already auto-approved)
 
   auto-fix-runner:
     if: github.event_name == 'workflow_dispatch'

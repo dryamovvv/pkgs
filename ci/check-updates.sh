@@ -34,9 +34,13 @@ for pkgdir in packages/*/; do
 	# Normalize: strip leading 'v'
 	latest_ver="${latest_tag#v}"
 
-	# Normalize both for comparison: strip leading/trailing whitespace
-	pkgver_norm=$(echo "$pkgver" | xargs)
-	latest_norm=$(echo "$latest_ver" | xargs)
+	# Normalize both for comparison: collapse separators, lowercase
+	# 0.1.0rc1 ↔ 0.1.0-rc1, 2026.02.08 ↔ 2026-02-08
+	normalize() {
+		echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[-.]/_/g; s/\([0-9]\)rc/\1_rc/'
+	}
+	pkgver_norm=$(normalize "$pkgver")
+	latest_norm=$(normalize "$latest_ver")
 
 	if [ "$latest_norm" = "$pkgver_norm" ]; then
 		echo "OK   $pkg: $pkgver (latest)"

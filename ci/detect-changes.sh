@@ -4,7 +4,10 @@ set -euo pipefail
 # Detect changed packages relative to previous commit
 # Outputs JSON array of package names for GitHub Actions matrix
 
-if ! git rev-parse HEAD~1 >/dev/null 2>&1; then
+BASE_SHA="${BASE_SHA:-HEAD~1}"
+HEAD_SHA="${HEAD_SHA:-HEAD}"
+
+if ! git rev-parse "$BASE_SHA" >/dev/null 2>&1; then
   PKGS=$(ls -d packages/*/ 2>/dev/null | sed 's|packages/||;s|/||')
   if [ -z "$PKGS" ]; then
     echo '[]'
@@ -15,7 +18,7 @@ if ! git rev-parse HEAD~1 >/dev/null 2>&1; then
 fi
 
 # If CI/CD files changed, rebuild all packages
-if git diff --name-only HEAD~1 -- ci/ .github/workflows/ | grep -q .; then
+if git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- ci/ .github/workflows/ | grep -q .; then
   ALL=$(ls -d packages/*/ 2>/dev/null | sed 's|packages/||;s|/||')
   if [ -z "$ALL" ]; then
     echo '[]'
@@ -26,7 +29,7 @@ if git diff --name-only HEAD~1 -- ci/ .github/workflows/ | grep -q .; then
 fi
 
 # Check for package changes
-CHANGED=$(git diff --name-only HEAD~1 -- packages/ | grep -oP 'packages/\K[^/]+' | sort -u)
+CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- packages/ | grep -oP 'packages/\K[^/]+' | sort -u)
 
 if [ -z "$CHANGED" ]; then
   echo '[]'

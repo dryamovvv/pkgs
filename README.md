@@ -65,7 +65,7 @@ pkgs/
 │   └── ...
 ├── ci/
 │   ├── build-package.sh   # Сборка в контейнере (ccache, makepkg, GPG sign)
-│   ├── deploy-package.sh   # Деплой на сервер через SSH/SCP с flock-блокировкой
+│   ├── deploy-package.sh   # Деплой через GitHub Releases
 │   └── detect-changes.sh  # Детект изменённых пакетов
 ├── .github/workflows/
 │   └── build.yml          # CI/CD: detect → build+deploy matrix
@@ -75,7 +75,7 @@ pkgs/
 ## CI
 
 - **Кэши:** Docker image, pacman, ccache (по PKGBUILD hash), Cargo
-- **Деплой:** SCP + flock атомарный деплой на удалённый сервер с детекцией конфликтов
+- **Деплой:** Деплой пакетов и repo.db в GitHub Releases
 - **Отладка:** tmate SSH через `workflow_dispatch` с `debug_enabled: true`
 - **Таймаут:** 90 мин на сборку
 

@@ -6,7 +6,7 @@
 
 ## Architecture
 
-Монорепозиторий пакетов Arch Linux aarch64, оптимизированный под Raspberry Pi 5 (Cortex-A76). Сборка — на нативных ARM64 GitHub-раннерах (`ubuntu-24.04-arm`), хостинг — удалённый сервер (`dryam.ru`).
+Монорепозиторий пакетов Arch Linux aarch64, оптимизированный под Raspberry Pi 5 (Cortex-A76). Сборка — на нативных ARM64 GitHub-раннерах (`ubuntu-24.04-arm`), хостинг — GitHub Releases.
 
 Репозиторий: `github:dryamovvv/pkgs`
 URL репозитория pacman: `http://pkgs.dryam.ru/aarch64`
@@ -21,7 +21,7 @@ pkgs/
 │   └── ...
 ├── ci/
 │   ├── build-package.sh      # Сборка в контейнере (pacman-key, ccache, makepkg)
-│   ├── deploy-package.sh     # Деплой через SSH/SCP с flock-блокировкой
+│   ├── deploy-package.sh     # Деплой через GitHub Releases
 │   ├── detect-changes.sh     # Детект изменённых пакетов
 │   ├── compute-build-hash.sh # Детерминированный хэш сборки (PKGBUILD + sources + CI)
 │   ├── run-compute-hash.sh   # Обёртка с fallback и санитизацией для cache keys
@@ -71,18 +71,18 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
    - Сборка `makepkg -s --noconfirm` с RPi5 CFLAGS/CXXFLAGS/LDFLAGS + ccache
 3. **deploy** — отдельная job на `ubuntu-24.04-arm`:
    - Скачивает все артефакты, деплоит через Docker-контейнер
-   - `ci/deploy-package.sh`: SCP + flock атомарный деплой с retry-loop (30 попыток)
+   - `ci/deploy-package.sh`: Деплой в GitHub Releases (тег latest)
 
 Особенности:
 
 - `detect-changes.sh` обрабатывает первый коммит (HEAD~1 не существует) — собирает все пакеты
 - При изменении `ci/` или `.github/workflows/` — пересборка всех пакетов
 - Если изменений в `packages/` нет — `detect` выдаёт `[]`, сборка скипается
-- `concurrency: deploy-${{ github.ref }}` — сериализует деплой, но не отменяет
+- `concurrency: group: deploy-repo` — сериализует деплой в GitHub Releases
 - `fail-fast: false` — один упавший пакет не отменяет остальные
 - tmate-отладка через `workflow_dispatch` с `debug_enabled: true`
 - `force_rebuild_all` (workflow_dispatch) — принудительная пересборка всех пакетов с инвалидацией кэша
-- Деплой через SCP + flock на удалённый сервер с детекцией конфликтов
+- Деплой осуществляется в GitHub Releases через gh release upload
 
 ### Build Hash (compute-build-hash.sh)
 
@@ -98,15 +98,12 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
 
 ## deploy-package.sh
 
-Retry-based (30 попыток) деплой внутри arch-контейнера:
+Деплой внутри arch-контейнера через GitHub CLI (`gh release`):
 
-1. SCP пакета в staging-директорию на роутере
-2. Скачивает текущую базу repo.db с роутера (под flock)
-3. `repo-add -R` локально в контейнере (Arch имеет pacman)
-4. Генерирует index.html с HTML-эскейпингом
-5. SCP обновлённой базы + index.html в staging
-6. `flock` + md5sum-detection: атомарный mv в repo-директорию
-7. При конфликте (другой job изменил базу) — sleep 3s + retry
+1. Скачивает текущую базу `repo.db` из GitHub Releases (тег latest)
+2. Добавляет новые пакеты через `repo-add` локально в контейнере
+3. Генерирует `index.html` с HTML-эскейпингом
+4. Загружает обновлённую базу, `index.html` и пакеты обратно в GitHub Releases (с флагом `--clobber`)
 
 ## Конфигурация pacman на RPi5
 
@@ -138,7 +135,7 @@ sudo pacman-key --lsign-key 0F98FE406BB366EB10AFAD8D90B35929BB827D35
 
 ## CI настройки
 
-Деплой на удалённый сервер: роутер Keenetic (`dryam.ru:222`), файлы на `/dev/sda1`, веб-сервер lighttpd на порту 80.
+Деплой осуществляется в GitHub Releases репозитория.
 
 ### GPG подпись
 

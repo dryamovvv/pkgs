@@ -29,7 +29,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-repo
   cancel-in-progress: false
 
 jobs:
@@ -40,12 +40,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - id: set-matrix
         env:
           FORCE_PKG: ${{ github.event.inputs.force_pkg }}
           FORCE_REBUILD_ALL: ${{ github.event.inputs.force_rebuild_all }}
+          BASE_SHA: ${{ github.event.before || 'HEAD~1' }}
+          HEAD_SHA: ${{ github.sha || 'HEAD' }}
         run: |
+          if [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || [ -z "$BASE_SHA" ]; then
+            BASE_SHA="HEAD~1"
+          fi
+          export BASE_SHA HEAD_SHA
           if [ "${FORCE_REBUILD_ALL:-false}" = "true" ]; then
             ALL=$(ls -d packages/*/ 2>/dev/null | sed 's|packages/||;s|/||')
             if [ -z "$ALL" ]; then
@@ -229,7 +235,7 @@ jobs:
   deploy-packages:
     needs: build-packages-matrix
     runs-on: ubuntu-24.04-arm
-    if: needs.build-packages-matrix.result == 'success'
+    if: always() && needs.build-packages-matrix.result != 'skipped' && !cancelled()
     permissions:
       contents: write
     steps:

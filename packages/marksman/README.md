@@ -9,7 +9,7 @@ wiki-link-style references (Zettelkasten). Optimized for Raspberry Pi 5
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

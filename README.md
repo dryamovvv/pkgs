@@ -11,7 +11,7 @@
 [custom-repo]
 SigLevel = Required TrustedOnly
 Server = http://pkgs.dryam.ru/aarch64
-```
+```text
 
 Импортируйте ключ подписи:
 
@@ -21,7 +21,7 @@ sudo pacman-key --recv-keys 0F98FE406BB366EB10AFAD8D90B35929BB827D35
 sudo pacman-key --add keys/pgp/BB827D35.asc
 sudo pacman-key --lsign-key 0F98FE406BB366EB10AFAD8D90B35929BB827D35
 sudo pacman -Sy
-```
+```text
 
 ## Флаги оптимизации
 
@@ -32,11 +32,11 @@ sudo pacman -Sy
 | `-pipe`                       | Пайпы вместо временных файлов                                  |
 | `-Wl,-z,max-page-size=0x4000` | 16K ELF-сегменты (размер страницы RPi5)                        |
 
-```
+```text
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
-```
+```text
 
 Доп. компиляторы: Rust (`-C target-cpu=cortex-a76 -C opt-level=2`), Go (`GOARCH=arm64 GOARM64=v8.2`).
 
@@ -48,13 +48,13 @@ mkdir -p packages/<pkg-name>
 git add packages/<pkg-name>
 git commit -m "feat: add <pkg-name>"
 git push
-```
+```text
 
 CI автоматически соберёт и задеплоит пакет.
 
 ## Структура
 
-```
+```text
 pkgs/
 ├── keys/
 │   └── pgp/
@@ -70,7 +70,7 @@ pkgs/
 ├── .github/workflows/
 │   └── build.yml          # CI/CD: detect → build+deploy matrix
 └── README.md
-```
+```text
 
 ## CI
 

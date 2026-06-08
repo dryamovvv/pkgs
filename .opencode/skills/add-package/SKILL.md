@@ -121,7 +121,7 @@ package() {
   # Install systemd services, polkit rules, etc.
   install -Dm644 "$srcdir/<service>" "$pkgdir/usr/lib/systemd/system/<service>"
 }
-```
+```text
 
 **PKGBUILD rules:**
 
@@ -148,7 +148,7 @@ prepare() {
   git submodule update --init --recursive
   # ... extra setup
 }
-```
+```text
 
 ### `.install` file (post-install hooks)
 
@@ -167,7 +167,7 @@ post_upgrade() {
 pre_remove() {
   # cleanup before removal
 }
-```
+```text
 
 ### RPi5 Cortex-A76 optimization (all compilers)
 
@@ -218,17 +218,17 @@ Generate `packages/<pkg-name>/AGENTS.md` (for the agent — build specifics, cho
 
 ## RPi5 flags
 
-```
+```text
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
 <language-specific-flags>
-```
+```text
 
 ## Notes
 
 <gotchas, quirks, why certain opts were chosen>
-```
+```text
 
 Generate `packages/<pkg-name>/README.md` (for humans — package summary, build instructions):
 
@@ -241,7 +241,7 @@ Generate `packages/<pkg-name>/README.md` (for humans — package summary, build 
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 
@@ -252,7 +252,7 @@ makepkg -s
 | Feature | Enabled | Description |
 |---------|---------|-------------|
 | <name>  | yes/no  | <what it does> |
-```
+```text
 
 ### 5. Create directory and commit
 
@@ -265,7 +265,7 @@ mkdir packages/<pkg-name>
 git add packages/<pkg-name>
 git commit -m "feat: add <pkg-name> <version>"
 git push
-```
+```text
 
 ### 6. Update root AGENTS.md and README.md
 

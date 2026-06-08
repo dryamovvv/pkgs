@@ -9,7 +9,7 @@ Automate adding new packages: user creates an issue → AI researches, builds, c
 
 ## Architecture
 
-```
+```text
 Issue opened (label: new-package)
   │  opencode: research → enable all features → branch add-package/{name}
   │  → PKGBUILD + AGENTS.md + README.md → comment (list features) → PR
@@ -24,7 +24,7 @@ Issue opened (label: new-package)
 │   │  build.yml: rebuild
 │   │
 └── main updated → build.yml rebuilds → deploy updates latest release
-```
+```text
 
 ## Changes
 

@@ -6,7 +6,7 @@ A command-line benchmarking tool
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

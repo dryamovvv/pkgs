@@ -6,7 +6,7 @@ A smarter cd command for your terminal
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

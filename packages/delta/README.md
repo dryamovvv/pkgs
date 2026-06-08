@@ -6,7 +6,7 @@ A syntax-highlighting pager for git, diff, and grep output
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

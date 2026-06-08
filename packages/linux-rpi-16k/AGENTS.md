@@ -12,10 +12,10 @@
 
 Kernel uses KCFLAGS/KCPPFLAGS (not standard CFLAGS — would break kernel build):
 
-```
+```text
 KCFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 KCPPFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
-```
+```text
 
 ## Notes
 

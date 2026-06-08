@@ -133,7 +133,7 @@ opencode will attempt to auto-fix this issue." \
             # Add the new attempt label
             gh issue edit "$EXISTING" --repo "${REPO}" --add-label "fix-attempt-${ATTEMPT}"
           done
-```
+```text
 
 - [ ] **Step 2: Verify YAML is valid**
 
@@ -145,7 +145,7 @@ Expected: No errors
 ```bash
 git add .github/workflows/build.yml
 git commit -m "feat(ci): add report-failure job to create issues on build failures"
-```
+```text
 
 ---
 
@@ -343,7 +343,7 @@ Important: Only fix the package that failed. Do not modify other packages or CI 
 
 Build run: ${RUN_URL}" || true
           fi
-```
+```text
 
 - [ ] **Step 2: Verify YAML is valid**
 
@@ -355,7 +355,7 @@ Expected: No errors
 ```bash
 git add .github/workflows/opencode.yml
 git commit -m "feat(ci): add auto-fix job triggered by build failures via workflow_run"
-```
+```text
 
 ---
 
@@ -373,7 +373,7 @@ gh label create fix-attempt-1 --color "FBBC04" --description "Auto-fix attempt 1
 gh label create fix-attempt-2 --color "FBBC04" --description "Auto-fix attempt 2 of 3" --repo dryamovvv/pkgs || true
 gh label create fix-attempt-3 --color "FBBC04" --description "Auto-fix attempt 3 of 3" --repo dryamovvv/pkgs || true
 gh label create unfixable --color "000000" --description "Auto-fix failed after 3 attempts — manual fix needed" --repo dryamovvv/pkgs || true
-```
+```text
 
 Expected: Labels created (or already exist)
 
@@ -392,7 +392,7 @@ Expected: ci-failure, fix-attempt-1, fix-attempt-2, fix-attempt-3, unfixable vis
 
 ```bash
 git push origin main
-```
+```text
 
 - [ ] **Step 2: Verify both workflow files are valid**
 

@@ -6,7 +6,7 @@ A modern replacement for ps
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

@@ -6,7 +6,7 @@ The minimal, blazing-fast, and infinitely customizable prompt
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

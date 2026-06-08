@@ -6,7 +6,7 @@ A command runner
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

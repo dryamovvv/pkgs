@@ -6,7 +6,7 @@ A command-line fuzzy finder, optimized for Raspberry Pi 5 (Cortex-A76).
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

@@ -13,7 +13,7 @@ URL репозитория pacman: `http://pkgs.dryam.ru/aarch64`
 
 ## Структура
 
-```
+```text
 pkgs/
 ├── packages/              # Каждый пакет — поддиректория с PKGBUILD
 │   ├── <pkg-name>/
@@ -34,17 +34,17 @@ pkgs/
 ├── .gitignore
 ├── AGENTS.md
 └── README.md
-```
+```text
 
 ## RPi5 оптимизация
 
 CPU Cortex-A76, ARMv8.2-A. В makepkg.conf (внутри контейнера):
 
-```
+```text
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
-```
+```text
 
 | Флаг                          | Значение                                                                |
 | ----------------------------- | ----------------------------------------------------------------------- |
@@ -114,7 +114,7 @@ Retry-based (30 попыток) деплой внутри arch-контейне�
 [custom-repo]
 SigLevel = Required TrustedOnly
 Server = http://pkgs.dryam.ru/aarch64
-```
+```text
 
 Импорт ключа подписи:
 
@@ -123,7 +123,7 @@ sudo pacman-key --recv-keys 0F98FE406BB366EB10AFAD8D90B35929BB827D35
 #или из файла:
 sudo pacman-key --add keys/pgp/BB827D35.asc
 sudo pacman-key --lsign-key 0F98FE406BB366EB10AFAD8D90B35929BB827D35
-```
+```text
 
 ## Добавление пакета
 

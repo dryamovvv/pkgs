@@ -6,7 +6,7 @@ A ls-like command for disks
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

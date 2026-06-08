@@ -162,6 +162,7 @@ GitHub Secrets/Variables:
 | erd           | Modern filesystem and disk-usage utility               | 3.1.2   |
 | eza           | Modern maintained replacement for ls                   | 0.23.4  |
 | fd            | Simple, fast alternative to find                       | 10.4.2  |
+| fzf           | Command-line fuzzy finder                              | 0.73.1  |
 | grex          | Command-line tool for generating regex                 | 1.4.6   |
 | helix         | Modal terminal-based text editor                       | latest  |
 | hyperfine     | Command-line benchmarking tool                         | 1.20.0  |

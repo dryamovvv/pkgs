@@ -1,19 +1,13 @@
 ---
 name: Feature request
-about: Suggest an improvement to the repository or CI
-title: "[FEATURE] "
-labels: enhancement
+about: Suggest an improvement to CI, workflows, or the repository
+title: "[Feature]: "
+labels: [feature]
 assignees: ""
 ---
 
-**Related problem**
-Is your request related to a problem? Describe it briefly.
+**What to improve**
+<!-- e.g.: add X cache, speed up Y, support Z architecture -->
 
-**Proposed solution**
-What change or addition would you like to see?
-
-**Alternatives considered**
-Any alternative approaches you have thought about.
-
-**Additional context**
-Links, references, or other relevant information.
+**Why**
+<!-- e.g.: saves 5 min per build, needed for new RPi model -->

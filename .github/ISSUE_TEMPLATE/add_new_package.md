@@ -1,31 +1,18 @@
 ---
 name: Add new package
-about: Request a new package to be added to the repository
-title: "Add [PACKAGE] "
-labels: new-package
+about: Request a new package — AI researches, builds, and creates a PR
+title: "[Package]: "
+labels: [new-package]
 assignees: ""
 ---
 
 **Package name**
-Name of the package in the AUR or upstream.
+<!-- Examples: yazi, lazygit, neovim -->
 
-**Upstream URL**
-Find automatic
+**Upstream URL** (optional — if known)
 
-**Enable all additional features**
-Yes
+**Version** (optional — AI will find latest)
 
-**Enable tests**
-No
-
-**Create README.md**
-Yes
-
-**Create AGENTS.md**
-Yes
-
-**Optimization flags for rpi5 16k from README.md**
-Yes
-
-**Additional comments**
-No
+**Preferences** (optional — override AI defaults)
+<!-- AI enables all features by default, disables tests, strips debug symbols.
+     Override any: e.g. "disable docs", "enable tests", "skip systemd service" -->

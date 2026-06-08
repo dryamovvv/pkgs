@@ -10,6 +10,8 @@
 
 ---
 
+## Header to
+
 ### Task 1: Add `report-failure` job to build.yml
 
 **Files:**
@@ -20,7 +22,7 @@
 
 Add the following job after the `build` job (after line 143). This job runs when the build matrix fails, finds which packages failed, and creates or updates a GitHub issue with labels tracking the attempt count.
 
-```yaml
+````yaml
   report-failure:
     needs: [detect, build]
     if: failure()
@@ -410,3 +412,4 @@ Check that opencode.yml appears in the workflow list with its triggers properly 
 - [x] Spec coverage: `report-failure` job ✓, `auto-fix` job ✓, `workflow_run` trigger ✓, labels ✓, loop prevention ✓
 - [x] No placeholders: All code is complete
 - [x] Type consistency: Labels match between report-failure and auto-fix (ci-failure, fix-attempt-N, unfixable)
+````

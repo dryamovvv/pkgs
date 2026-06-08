@@ -51,7 +51,7 @@ if [ -n "$GPG_KEY" ] && [ -n "$GPG_IMPORT" ]; then
 	echo "$GPG_IMPORT" | gpg --import --batch --no-tty 2>&1 || true
 	if [ -n "$GPG_PASSPHRASE" ]; then
 		gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --pinentry-mode loopback \
-			--edit-key "$GPG_KEY" trust quit <<TRUSTEOF
+			--edit-key "$GPG_KEY" trust quit <<TRUSTEOF || true
 5
 y
 TRUSTEOF
@@ -65,7 +65,7 @@ TRUSTEOF
 	su builder -c "gpg --import --batch --no-tty" <<<"$GPG_IMPORT" 2>&1 || true
 	if [ -n "$GPG_PASSPHRASE" ]; then
 		su builder -c "gpg --batch --yes --passphrase '$GPG_PASSPHRASE' --pinentry-mode loopback \
-			--edit-key '$GPG_KEY' trust quit" <<TRUSTEOF2
+			--edit-key '$GPG_KEY' trust quit" <<TRUSTEOF2 || true
 5
 y
 TRUSTEOF2

@@ -54,6 +54,31 @@ jobs:
             echo "::endgroup::"
           done
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install markdownlint-cli2
+        run: npm install -g markdownlint-cli2
+
+      - name: Fix markdown formatting
+        run: |
+          echo "Running markdown auto-fix..."
+          markdownlint-cli2 --fix '**/*.md' 2>&1 || true
+          
+          # Convert hard tabs to spaces in TODO.md and similar
+          find . -name "*.md" -type f ! -path "./.git/*" ! -path "./node_modules/*" \
+            -exec sed -i 's/\t/    /g' {} \;
+          
+          # Show what was changed
+          if git diff --quiet; then
+            echo "No markdown changes needed"
+          else
+            echo "Markdown files were auto-fixed:"
+            git diff --name-only
+          fi
+
       - name: Lint Markdown
         uses: DavidAnson/markdownlint-cli2-action@v19
         with:

@@ -46,6 +46,11 @@ jobs:
           git config user.name "opencode[bot]"
           git config user.email "opencode[bot]@users.noreply.github.com"
 
+      - name: Install uv (for arch-mcp)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Run opencode (new-package)
         if: |
           github.event_name == 'issues' &&

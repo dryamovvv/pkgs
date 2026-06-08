@@ -50,6 +50,12 @@ jobs:
         run: |
           git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
 
+      - name: Configure git credentials for push
+        run: |
+          git config --global credential.helper store
+          echo "https://x-access-token:${{ github.token }}@github.com" > ~/.git-credentials
+          chmod 600 ~/.git-credentials
+
       - name: Install uv (for arch-mcp)
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -66,7 +72,7 @@ jobs:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
-          model: opencode/deepseek-v4-flash-free
+          model: ${{ vars.OPEncode_MODEL || 'opencode/deepseek-v4-flash-free' }}
           share: true
           use_github_token: true
           prompt: |
@@ -107,7 +113,7 @@ jobs:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
-          model: opencode/deepseek-v4-flash-free
+          model: ${{ vars.OPEncode_MODEL || 'opencode/deepseek-v4-flash-free' }}
           share: true
           use_github_token: true
           prompt: |
@@ -148,7 +154,7 @@ jobs:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
-          model: opencode/deepseek-v4-flash-free
+          model: ${{ vars.OPEncode_MODEL || 'opencode/deepseek-v4-flash-free' }}
           share: true
           use_github_token: true
           prompt: |
@@ -185,7 +191,7 @@ jobs:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
-          model: opencode/deepseek-v4-flash-free
+          model: ${{ vars.OPEncode_MODEL || 'opencode/deepseek-v4-flash-free' }}
           share: true
           use_github_token: true
           prompt: |
@@ -213,7 +219,7 @@ jobs:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
-          model: opencode/deepseek-v4-flash-free
+          model: ${{ vars.OPEncode_MODEL || 'opencode/deepseek-v4-flash-free' }}
           share: true
           use_github_token: true
           prompt: |
@@ -241,7 +247,7 @@ jobs:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
-          model: opencode/deepseek-v4-flash-free
+          model: ${{ vars.OPEncode_MODEL || 'opencode/deepseek-v4-flash-free' }}
           share: true
           use_github_token: true
           prompt: |
@@ -301,7 +307,7 @@ jobs:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
-          model: opencode/deepseek-v4-flash-free
+          model: ${{ vars.OPEncode_MODEL_REVIEW || vars.OPEncode_MODEL || 'opencode/deepseek-v4-flash-free' }}
           share: true
           use_github_token: true
           prompt: |
@@ -353,7 +359,7 @@ jobs:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
-          model: opencode/deepseek-v4-flash-free
+          model: ${{ vars.OPEncode_MODEL_AUTOFIX || vars.OPEncode_MODEL || 'opencode/deepseek-v4-flash-free' }}
           share: true
           use_github_token: true
           prompt: |

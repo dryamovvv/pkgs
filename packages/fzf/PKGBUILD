@@ -2,7 +2,7 @@
 # Contributor: dryamovvv (Arch Linux package)
 # Optimized for Raspberry Pi 5 (Cortex-A76)
 pkgname=fzf
-pkgver=0.50.0
+pkgver=0.73.1
 pkgrel=1
 pkgdesc="A command-line fuzzy finder, optimized for Raspberry Pi 5 (Cortex-A76)"
 arch=('aarch64')
@@ -16,7 +16,7 @@ makedepends=(
   'go'
 )
 source=("https://github.com/junegunn/fzf/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('ae4f49f8606a7d28498208fa1b93c5d3b890719eea97e02559e66160138b750c')
+sha256sums=('bef140a1a96994029153dca8c00b1750b9a5a764fb9db2dc68d7bb40e8a29e8a')
 
 prepare() {
   cd "$srcdir/fzf-$pkgver"

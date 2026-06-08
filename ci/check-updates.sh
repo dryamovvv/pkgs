@@ -22,17 +22,12 @@ for pkgdir in packages/*/; do
 	[ -n "$source_url" ] || continue
 	source_url="${source_url%.git}"
 
-	# Fetch latest release from Atom feed
-	raw_title=$(
-		curl -sL "https://github.com/${source_url}/releases.atom" 2>/dev/null |
-			grep -oP '<title>\K[^<]+' |
-			grep -vi 'releases\|Release\|Tags\|Changelog' |
-			head -1
-	) || raw_title=""
-	[ -n "$raw_title" ] || continue
+	# Fetch latest release tag from Atom feed (use <id> which contains the tag)
+	raw_id=$(curl -sL "https://github.com/${source_url}/releases.atom" 2>/dev/null | grep -oP '<id>tag:github\.com,2008:Repository/\d+/\K[^<]+' | head -1) || raw_id=""
+	[ -n "$raw_id" ] || continue
 
-	# Clean version: strip package name prefix, strip leading 'v', take first word
-	latest_ver=$(echo "$raw_title" | sed -E 's/^[A-Za-z0-9_.-]+ //; s/^v//; s/ .*//')
+	# Strip leading 'v' if present
+	latest_ver="${raw_id#v}"
 
 	# Compare versions (simple string compare — works for semver)
 	if [ "$latest_ver" != "$pkgver" ] && [ -n "$latest_ver" ]; then

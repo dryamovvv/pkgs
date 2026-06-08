@@ -61,32 +61,30 @@ jobs:
           share: true
           use_github_token: true
           prompt: |
-            A new package addition request was opened:
-
-            **Issue:** ${{ github.event.issue.title }}
-            **Body:**
+            Add a new package. Issue: ${{ github.event.issue.title }}
             ${{ github.event.issue.body }}
 
-            ## Your task
+            Steps (execute sequentially, do NOT ask questions):
 
-            Load the skill `.opencode/skills/add-package/SKILL.md` and follow it EXACTLY:
+            1. Extract package name from issue.
+            2. Research: find upstream repo, latest release tag, build system.
+               Check AUR (aur.archlinux.org) for existing PKGBUILD as reference.
+               Use Context7 and web search.
+            3. Create branch: add-package/{name}
+            4. Write packages/{name}/PKGBUILD:
+               - Enable ALL features, tests=disabled, debug=stripped, docs=enabled
+               - RPi5 flags: CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe", LDFLAGS="-Wl,-z,max-page-size=0x4000"
+               - Include sha256sums (download source, compute with sha256sum)
+               - Follow Arch packaging conventions
+            5. Write packages/{name}/README.md (description, build deps, features table)
+            6. Write packages/{name}/AGENTS.md (version, build system, RPi5 flags)
+            7. Add package to AGENTS.md and README.md tables (alphabetical)
+            8. git add -A && git commit -m "feat: add {name} {version}"
+            9. git push origin add-package/{name}
+            10. gh pr create --base main --head add-package/{name} --title "feat: add {name} {version}" --body "New package. Features enabled: ..."
+            11. Comment on issue: "PR: <link>. Enabled features: ... Reply 'disable X' to change."
 
-            1. **Extract package name** from the issue title/body.
-            2. **Research** the package — find upstream, latest version, build system, all optional features.
-               Use Context7 and web search. 
-            3. **Enable ALL features** by default. Hard rules: docs=always, tests=disabled, debug=stripped.
-            4. **Do NOT ask interactive questions.** Enable everything. Comment on the issue listing what you enabled and why. 
-               Mention that user can reply "disable X" to change.
-            5. **Create branch:** `add-package/{pkg-name}`
-            6. **Create** `packages/{pkg-name}/PKGBUILD` with all RPi5 Cortex-A76 flags.
-            7. **Create** `packages/{pkg-name}/AGENTS.md` and `packages/{pkg-name}/README.md`.
-            8. **Add package** to `AGENTS.md` and `README.md` package tables (alphabetical order).
-            9. **Commit** with message: `feat: add {pkg-name} {version}`
-            10. **Push** the branch.
-            11. **Open PR** against main with body listing selected features.
-            12. **Comment on issue** with PR link and summary of enabled features.
-
-            Do NOT wait for CI. The auto-merge workflow will merge after CI passes.
+            Speed over perfection. Skip wait for CI.
 
       - name: Run opencode (modify-package)
         if: |

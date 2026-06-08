@@ -45,6 +45,7 @@ GPG_PASSPHRASE="${GPG_PASSPHRASE:-}"
 
 if [ -n "$GPG_KEY" ] && [ -n "$GPG_IMPORT" ]; then
 	echo "=== Setting up GPG signing ==="
+	set +e
 
 	# Import key for root (repo-add runs as root in deploy)
 	echo "$GPG_IMPORT" | gpg --import --batch --no-tty 2>&1 || true
@@ -81,6 +82,7 @@ GPGAGENT
 			--passphrase '\$GPG_PASSPHRASE' --pinentry-mode loopback \
 			--sign /dev/null" 2>/dev/null || true
 	fi
+	set -e
 fi
 
 # Build

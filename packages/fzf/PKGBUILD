@@ -16,7 +16,7 @@ makedepends=(
   'go'
 )
 source=("https://github.com/junegunn/fzf/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('ae4f49f8606a7d28498208fa1b93c5d3b890719eea97e02559e66160138b750c')
+sha256sums=('bef140a1a96994029153dca8c00b1750b9a5a764fb9db2dc68d7bb40e8a29e8a')
 
 prepare() {
   cd "$srcdir/fzf-$pkgver"

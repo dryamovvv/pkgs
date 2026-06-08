@@ -1,0 +1,23 @@
+name: Check upstream updates
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'  # Every 4 hours
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check for updates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x ci/check-updates.sh
+          bash ci/check-updates.sh

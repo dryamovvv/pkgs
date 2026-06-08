@@ -21,13 +21,18 @@ pkgs/
 │   └── ...
 ├── ci/
 │   ├── build-package.sh      # Сборка в контейнере (pacman-key, ccache, makepkg)
-│   ├── deploy-package.sh     # Деплой через SSH/SCP с flock-блокировкой
+│   ├── deploy-package.sh     # Деплой в GitHub Releases (gh release upload --clobber)
 │   ├── detect-changes.sh     # Детект изменённых пакетов
 │   ├── compute-build-hash.sh # Детерминированный хэш сборки (PKGBUILD + sources + CI)
 │   ├── run-compute-hash.sh   # Обёртка с fallback и санитизацией для cache keys
-│   └── auto-add-sha256sums.sh # Автообновление sha256sums в PKGBUILD'ах
+│   ├── auto-add-sha256sums.sh # Автообновление sha256sums в PKGBUILD'ах
+│   ├── check-updates.sh      # Проверка upstream-версий через GitHub API
+│   └── report-failure.sh     # Создание ci-failure issues + запуск auto-fix
 ├── .github/workflows/
-│   ├── build.yml             # CI: detect → build matrix + deploy
+│   ├── build.yml             # CI: detect → build matrix → deploy (pull_request + push + workflow_dispatch)
+│   ├── opencode.yml          # AI: issue/comment handlers, PR review, auto-fix runner
+│   ├── check-updates.yml     # Проверка upstream-версий каждые 4 часа
+│   ├── lint.yml              # ShellCheck + PKGBUILD syntax + markdownlint на PR
 │   └── auto-add-shasums.yml  # Автоматическое обновление sha256sums (workflow_dispatch)
 ├── .opencode/skills/
 │   └── add-package/SKILL.md  # Интерактивный навык добавления пакетов
@@ -69,20 +74,21 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
    - Кэш-директории создаются заранее, чтобы избежать warning'ов при cache-hit
    - В built-cache попадают только `.pkg.tar.*` / `.sig` файлы (не вся `src/` / `pkg/`)
    - Сборка `makepkg -s --noconfirm` с RPi5 CFLAGS/CXXFLAGS/LDFLAGS + ccache
-3. **deploy** — отдельная job на `ubuntu-24.04-arm`:
-   - Скачивает все артефакты, деплоит через Docker-контейнер
-   - `ci/deploy-package.sh`: SCP + flock атомарный деплой с retry-loop (30 попыток)
+3. **build-complete** — агрегатор: passes если все билды success/skipped, fails если любой упал. Required status check в branch protection.
+4. **deploy** — отдельная job на `ubuntu-24.04-arm` (только на push в main):
+   - Скачивает все артефакты, деплоит через GitHub Releases
+   - `ci/deploy-package.sh`: gh release download/upload, repo-add, index.html
 
-Особенности:
+Триггеры:
+- `push` на main → detect + build + build-complete + deploy
+- `pull_request` (opened/synchronize) → detect + build + build-complete (без деплоя)
+- `workflow_dispatch` → force rebuild, debug mode
 
-- `detect-changes.sh` обрабатывает первый коммит (HEAD~1 не существует) — собирает все пакеты
-- При изменении `ci/` или `.github/workflows/` — пересборка всех пакетов
-- Если изменений в `packages/` нет — `detect` выдаёт `[]`, сборка скипается
-- `concurrency: deploy-${{ github.ref }}` — сериализует деплой, но не отменяет
-- `fail-fast: false` — один упавший пакет не отменяет остальные
-- tmate-отладка через `workflow_dispatch` с `debug_enabled: true`
-- `force_rebuild_all` (workflow_dispatch) — принудительная пересборка всех пакетов с инвалидацией кэша
-- Деплой через SCP + flock на удалённый сервер с детекцией конфликтов
+Auto-merge:
+- При создании PR opencode вызывает `gh pr merge --auto --merge`
+- GitHub native auto-merge ждёт прохождения `build-complete` required check
+- Когда check passes → GitHub автоматически мержит PR в main
+- Push в main → deploy
 
 ### Build Hash (compute-build-hash.sh)
 
@@ -98,15 +104,13 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
 
 ## deploy-package.sh
 
-Retry-based (30 попыток) деплой внутри arch-контейнера:
+Деплой в GitHub Releases (`latest` tag):
 
-1. SCP пакета в staging-директорию на роутере
-2. Скачивает текущую базу repo.db с роутера (под flock)
-3. `repo-add -R` локально в контейнере (Arch имеет pacman)
-4. Генерирует index.html с HTML-эскейпингом
-5. SCP обновлённой базы + index.html в staging
-6. `flock` + md5sum-detection: атомарный mv в repo-директорию
-7. При конфликте (другой job изменил базу) — sleep 3s + retry
+1. Скачивает текущие артефакты из GitHub Releases (`gh release download latest`)
+2. `repo-add -R` в контейнере для обновления repo.db
+3. Генерирует index.html с HTML-эскейпингом
+4. `gh release upload latest --clobber` — загружает пакеты + repo.db + index.html
+5. При конфликте (другой job изменил базу) — sleep 3s + retry (30 попыток)
 
 ## Конфигурация pacman на RPi5
 
@@ -139,6 +143,15 @@ sudo pacman-key --lsign-key 0F98FE406BB366EB10AFAD8D90B35929BB827D35
 ## CI настройки
 
 Деплой на удалённый сервер: роутер Keenetic (`dryam.ru:222`), файлы на `/dev/sda1`, веб-сервер lighttpd на порту 80.
+
+### GitHub Releases as pacman repo
+
+Пакеты деплоятся в GitHub Releases (`latest` tag). URL repo для pacman:
+```ini
+[custom-repo]
+SigLevel = Required TrustedOnly
+Server = https://github.com/dryamovvv/pkgs/releases/latest/download
+```
 
 ### GPG подпись
 

@@ -97,8 +97,9 @@ jobs:
             7. Add package to AGENTS.md and README.md tables (alphabetical)
             8. git add -A && git commit -m "feat: add {name} {version}"
             9. git push origin add-package/{name}
-            10. gh pr create --base main --head add-package/{name} --title "feat: add {name} {version}" --body "New package. Features enabled: ..."
-            11. Comment on issue: "PR: <link>. Enabled features: ... Reply 'disable X' to change."
+             10. gh pr create --base main --head add-package/{name} --title "feat: add {name} {version}" --body "New package. Features enabled: ..."
+             11. Enable auto-merge on the PR: `gh pr merge {pr_number} --auto --merge`
+             12. Comment on issue: "PR: <link>. Enabled features: ... Reply 'disable X' to change."
 
             Speed over perfection. Skip wait for CI.
 
@@ -138,10 +139,11 @@ jobs:
             7. **Do NOT change unrelated packages or CI scripts.**
             8. **Commit** with message: `fix({pkg-name}): <what changed>`
             9. **Push** the branch.
-            10. **Open PR** against main with body summarizing the changes.
-            11. **Comment on issue** with PR link.
+             10. **Open PR** against main with body summarizing the changes.
+             11. **Enable auto-merge** on the PR: `gh pr merge {pr_number} --auto --merge`
+             12. **Comment on issue** with PR link.
 
-            Do NOT wait for CI. The auto-merge workflow will merge after CI passes.
+            Do NOT wait for CI. Native GitHub auto-merge will handle merging after checks pass.
 
       - name: Run opencode (remove-package)
         if: |
@@ -171,11 +173,12 @@ jobs:
             3. **Remove** the entire `packages/{pkg-name}/` directory.
             4. **Remove** the package entry from `AGENTS.md` and `README.md` package tables.
             5. **Commit** with message: `chore: remove {pkg-name}`
-            6. **Push** the branch.
-            7. **Open PR** against main.
-            8. **Comment on issue** with PR link.
+             6. **Push** the branch.
+             7. **Open PR** against main.
+             8. **Enable auto-merge** on the PR: `gh pr merge {pr_number} --auto --merge`
+             9. **Comment on issue** with PR link.
 
-            Do NOT wait for CI. The auto-merge workflow will merge after CI passes.
+            Do NOT wait for CI. Native GitHub auto-merge will handle merging after checks pass.
 
       - name: Run opencode (issue — generic/feature/bug)
         if: |
@@ -433,7 +436,14 @@ jobs:
               --body "Auto-fix attempt ${ATTEMPT} for issue #${ISSUE}. See workflow run: ${{ inputs.run-url }}\n\nAuto-fix branch: ${BRANCH}\n\nNote: issue will be closed only after PR is merged and CI passes." \
               --base main --head "$BRANCH" --repo ${{ github.repository }} --json url -q '.url') || true
 
-            gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "🔧 Auto-fix attempt ${ATTEMPT} created a PR: ${PR_URL}. It will be merged after verification; the issue will be closed only after merge and successful CI." || true
+            gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "🔧 Auto-fix attempt ${ATTEMPT} created a PR: ${PR_URL}. It will be auto-merged after checks pass (native GitHub auto-merge)." || true
+
+            ENABLED_AUTO=0
+            PR_NUM=$(echo "$PR_URL" | grep -oP '\d+$' || true)
+            if [ -n "$PR_NUM" ]; then
+              gh pr merge "$PR_NUM" --auto --merge --repo ${{ github.repository }} && ENABLED_AUTO=1 || true
+              echo "Auto-merge enabled=$ENABLED_AUTO for PR #$PR_NUM"
+            fi
           else
             echo "No changes produced by auto-fix; nothing to create."
           fi
@@ -445,7 +455,7 @@ jobs:
         run: |
           if [ "${{ job.status }}" = "success" ]; then
             EMOJI="✅"
-            MSG="Auto-fix attempt ${{ inputs.attempt }}/3 created (or no-op). A PR was opened for review. The issue will be closed after PR merge and successful CI."
+            MSG="Auto-fix attempt ${{ inputs.attempt }}/3 completed. PR opened with auto-merge enabled — will auto-merge after CI checks pass."
           elif [ "${{ job.status }}" = "cancelled" ]; then
             EMOJI="⛔"
             MSG="Auto-fix attempt ${{ inputs.attempt }}/3 was cancelled."

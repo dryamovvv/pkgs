@@ -202,9 +202,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: read
+      contents: write
       pull-requests: write
-      issues: read
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -215,7 +215,7 @@ jobs:
       - name: Auto-approve AI-generated PRs
         if: github.event.action == 'opened'
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           BRANCH="${{ github.event.pull_request.head.ref }}"
           if echo "$BRANCH" | grep -qE '^(add-package|modify-package|remove-package|auto-fix)/'; then
@@ -231,14 +231,13 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
         with:
           model: opencode/deepseek-v4-flash-free
           share: true
           use_github_token: true
-          token: ${{ secrets.GH_PAT }}
           prompt: |
             A PR needs code review:
 

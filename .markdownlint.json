@@ -1,0 +1,20 @@
+{
+  "default": true,
+  "MD013": {
+    "line_length": 80,
+    "heading_line_length": 80,
+    "header_line_length": 80,
+    "code_line_length": 80,
+    "code_blocks": true,
+    "headers": true,
+    "headers_length": 80,
+    "strict": false,
+    "stern": false
+  },
+  "MD040": true,
+  "MD034": true,
+  "MD010": {
+    "code_blocks": true
+  },
+  "MD001": true
+}

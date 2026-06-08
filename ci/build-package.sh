@@ -49,13 +49,6 @@ if [ -n "$GPG_KEY" ] && [ -n "$GPG_IMPORT" ]; then
 	# Import key for root (repo-add runs as root in deploy)
 	echo "$GPG_IMPORT" | gpg --import --batch --no-tty 2>&1 || true
 	echo "$GPG_IMPORT" | gpg --import --batch --no-tty 2>&1 || true
-	if [ -n "$GPG_PASSPHRASE" ]; then
-		gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --pinentry-mode loopback \
-			--edit-key "$GPG_KEY" trust quit <<TRUSTEOF || true
-5
-y
-TRUSTEOF
-	fi
 
 	# Import key for builder user (makepkg runs as builder)
 	mkdir -p /home/builder/.gnupg
@@ -63,13 +56,6 @@ TRUSTEOF
 	chmod 700 /home/builder/.gnupg
 	su builder -c "gpg --import --batch --no-tty" <<<"$GPG_IMPORT" 2>&1 || true
 	su builder -c "gpg --import --batch --no-tty" <<<"$GPG_IMPORT" 2>&1 || true
-	if [ -n "$GPG_PASSPHRASE" ]; then
-		su builder -c "gpg --batch --yes --passphrase '$GPG_PASSPHRASE' --pinentry-mode loopback \
-			--edit-key '$GPG_KEY' trust quit" <<TRUSTEOF2 || true
-5
-y
-TRUSTEOF2
-	fi
 
 	# Set up gpg-agent for non-interactive signing
 	cat >/home/builder/.gnupg/gpg-agent.conf <<'GPGAGENT'

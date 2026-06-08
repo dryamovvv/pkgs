@@ -7,6 +7,12 @@ on:
       - "packages/**"
       - "ci/**"
       - ".github/workflows/**"
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - "packages/**"
+      - "ci/**"
+      - ".github/workflows/**"
   workflow_dispatch:
     inputs:
       debug_enabled:
@@ -229,7 +235,7 @@ jobs:
   deploy-packages:
     needs: build-packages-matrix
     runs-on: ubuntu-24.04-arm
-    if: needs.build-packages-matrix.result == 'success'
+    if: needs.build-packages-matrix.result == 'success' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
     steps:
@@ -275,9 +281,24 @@ jobs:
         if: always()
         run: docker rm -f deployer 2>/dev/null || true
 
+  build-complete:
+    needs: [build-packages-matrix]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert all builds passed
+        run: |
+          result="${{ needs.build-packages-matrix.result }}"
+          echo "Matrix result: $result"
+          if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+            echo "One or more builds failed or were cancelled"
+            exit 1
+          fi
+          echo "All builds passed (or skipped — no changes)"
+
   create-failure-issue:
     needs: [detect-changed-packages, build-packages-matrix]
-    if: failure()
+    if: failure() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read

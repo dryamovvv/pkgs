@@ -15,7 +15,7 @@ JOBS=$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs" --jq '.jobs[] | select
 echo "DEBUG: JOBS=$JOBS" >&2
 
 if [ -n "$JOBS" ]; then
-	FAILED_PKGS=$(echo "$JOBS" | grep -oP '(?<=build \()[\w.-]+(?=\))' | sort -u) || FAILED_PKGS=""
+	FAILED_PKGS=$(echo "$JOBS" | grep -oP '\(\K[\w.-]+(?=\))' | sort -u) || FAILED_PKGS=""
 fi
 
 echo "DEBUG: FAILED_PKGS from gh=$FAILED_PKGS" >&2

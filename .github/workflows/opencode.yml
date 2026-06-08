@@ -46,6 +46,15 @@ jobs:
           git config user.name "opencode[bot]"
           git config user.email "opencode[bot]@users.noreply.github.com"
 
+      - name: Clear checkout auth header (prevents duplicate with opencode)
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
+
+      - name: Install uv (for arch-mcp)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Run opencode (new-package)
         if: |
           github.event_name == 'issues' &&
@@ -68,8 +77,9 @@ jobs:
 
             1. Extract package name from issue.
             2. Research: find upstream repo, latest release tag, build system.
-               Check AUR (aur.archlinux.org) for existing PKGBUILD as reference.
-               Use Context7 and web search.
+               Use arch-mcp (search_aur, search_archwiki, get_official_package_info)
+               to find existing PKGBUILDs as reference.
+               Use Context7 for build system docs. Use web search for missing info.
             3. Create branch: add-package/{name}
             4. Write packages/{name}/PKGBUILD:
                - Enable ALL features, tests=disabled, debug=stripped, docs=enabled

@@ -20,7 +20,7 @@ All features enabled:
 
 ## Installation
 
-```bash
+````bash
 sudo pacman -S atuin
 ```text
 
@@ -51,4 +51,4 @@ Configure at `/etc/atuin/server.toml`.
 [custom-repo]
 SigLevel = Optional TrustedOnly
 Server = https://dryamovvv.github.io/pkgs/aarch64
-```text
+````

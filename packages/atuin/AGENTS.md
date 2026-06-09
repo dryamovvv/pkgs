@@ -4,7 +4,7 @@
 
 Rust workspace with all features. Build command:
 
-```text
+````text
 cargo build --release --locked --all-features
 ```text
 
@@ -40,3 +40,4 @@ Generated at install time via `atuin gen-completions --shell {bash,zsh,fish}`.
 - `atuin-server.service` — sync server unit
 - `atuin-server.sysusers` — creates `atuin` system user
 - `atuin-server.tmpfiles` — creates `/etc/atuin` and `/var/lib/atuin`
+````

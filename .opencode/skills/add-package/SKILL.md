@@ -52,7 +52,7 @@ Use the `question` tool for interactive selection. Never decide for the user.
 
 ### 3. Create PKGBUILD
 
-```bash
+````bash
 # Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
 # Contributor: dryamovvv (Arch Linux package)
 # Optimized for Raspberry Pi 5 (Cortex-A76)
@@ -173,19 +173,18 @@ pre_remove() {
 
 **Mandatory** for ALL code in ALL languages:
 
-````
+```text
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
+````
 
-``
-
-| Флаг                           | Значение                                                                                             |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `-mcpu=cortex-a76+crypto`      | ARMv8.2-A + AES/SHA/PMULL; includes crc, lse, rdma, fp16, dotprod, rcpc                              |
-| `-O2`                          | Standard optimization (enables `-fomit-frame-pointer` on AArch64)                                    |
-| `-pipe`                        | Pipes instead of temporary files                                                                    |
-| `-Wl,-z,max-page-size=0x4000`  | 16K ELF segment alignment — ARM64 page size on RPi5                                                  |
+| Флаг                          | Значение                                                                |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `-mcpu=cortex-a76+crypto`     | ARMv8.2-A + AES/SHA/PMULL; includes crc, lse, rdma, fp16, dotprod, rcpc |
+| `-O2`                         | Standard optimization (enables `-fomit-frame-pointer` on AArch64)       |
+| `-pipe`                       | Pipes instead of temporary files                                        |
+| `-Wl,-z,max-page-size=0x4000` | 16K ELF segment alignment — ARM64 page size on RPi5                     |
 
 - **Rust:** `RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"`
 - **Go:** `GOFLAGS="-ldflags=-extldflags=-Wl,-z,max-page-size=0x4000" GOARCH=arm64 GOARM64=v8.2`
@@ -207,18 +206,18 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
 
 Generate `packages/<pkg-name>/AGENTS.md` (for the agent — build specifics, chosen features, flag rationale):
 
-```markdown
+````markdown
 # <pkg-name>
 
-| Attribute | Value |
-|-----------|-------|
-| Version | `<version>` |
-| Build system | `<build-system>` |
-| Features | `<enabled-features>` |
+| Attribute    | Value                |
+| ------------ | -------------------- |
+| Version      | `<version>`          |
+| Build system | `<build-system>`     |
+| Features     | `<enabled-features>` |
 
 ## RPi5 flags
 
-```text
+````text
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
@@ -297,4 +296,5 @@ Format: `| <pkg-name> | <one-line description> | <version> |`
 User: "add yazi"
 
 Response: research yazi → find its build options → ask user about each → create PKGBUILD + per-package AGENTS.md/README.md → update root AGENTS.md and README.md → commit → push → monitor CI until deployed.
+````
 ````

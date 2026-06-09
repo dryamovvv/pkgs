@@ -448,21 +448,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Auto-approve AI-generated PRs
-        if: github.event.action == 'opened'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.event.pull_request.head.ref }}
-        run: |
-          if echo "$BRANCH" | grep -qE '^(add-package|modify-package|remove-package|auto-fix|opencode)/'; then
-            echo "Auto-approving AI-generated PR: $BRANCH"
-            gh pr review ${{ github.event.pull_request.number }} --approve \
-              --body "LGTM. Automated approval — CI will verify the build." \
-              --repo ${{ github.repository }}
-          else
-            echo "Human PR: review-only mode (no auto-approve)"
-          fi
-
       - name: Run opencode PR review
         uses: anomalyco/opencode/github@latest
         env:
@@ -476,20 +461,33 @@ jobs:
           share: true
           use_github_token: true
           prompt: |
-            A PR needs code review:
+            You are reviewing an Arch Linux PKGBUILD PR. Quality standards:
 
-            **PR:** ${{ github.event.pull_request.html_url }}
-            **Title:** ${{ github.event.pull_request.title }}
-            **Branch:** ${{ github.event.pull_request.head.ref }}
+            ## Critical checks (fail = request changes)
+            1. PKGBUILD syntax: bash -n must pass
+            2. Required fields: pkgname, pkgver, pkgrel, pkgdesc, arch, url, license, depends, source, sha256sums
+            3. sha256sums correct (not empty, not placeholder)
+            4. Architecture: must include aarch64 (not x86_64 only)
+            5. RPi5 flags: CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe", LDFLAGS="-Wl,-z,max-page-size=0x4000"
+            6. Tests disabled: BUILD_TESTING=OFF, --disable-tests, etc.
+            7. No absolute paths in source=()
+            8. .nvchecker.toml present alongside PKGBUILD
 
-            ## Your task
+            ## Quality checks (warn but don't block)
+            1. namcap warnings on PKGBUILD
+            2. pkgdesc is descriptive (>10 chars)
+            3. License file included in package()
+            4. README.md and AGENTS.md present with accurate content
 
-            1. Review the PR diff: `gh pr diff ${{ github.event.pull_request.number }}`
-            2. Check for issues in the changed files and write your review findings.
-            3. Only submit a review if you find actual problems:
-               `gh pr review ${{ github.event.pull_request.number }} --request-changes -b "<issues>"`
-            4. If the PR looks correct, do nothing — do not approve.
-               Human reviewers handle approval for non-AI PRs.
+            ## Review flow
+            1. gh pr diff ${{ github.event.pull_request.number }} — read the full diff
+            2. Check each critical item
+            3. If any critical fails: gh pr review ${{ github.event.pull_request.number }} --request-changes with specific line refs
+            4. If only quality warnings: gh pr review ${{ github.event.pull_request.number }} --comment with suggestions
+            5. If all clear: gh pr review ${{ github.event.pull_request.number }} --approve
+            6. Comment summary of what was checked
+
+            If this is a re-review (PR was updated after previous review), only check items that were flagged before.
 
   auto-fix-runner:
     if: github.event_name == 'workflow_dispatch'

@@ -52,7 +52,7 @@ Use the `question` tool for interactive selection. Never decide for the user.
 
 ### 3. Create PKGBUILD
 
-````bash
+`````bash
 # Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
 # Contributor: dryamovvv (Arch Linux package)
 # Optimized for Raspberry Pi 5 (Cortex-A76)
@@ -177,7 +177,7 @@ pre_remove() {
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
-````
+```
 
 | Флаг                          | Значение                                                                |
 | ----------------------------- | ----------------------------------------------------------------------- |
@@ -217,12 +217,12 @@ Generate `packages/<pkg-name>/AGENTS.md` (for the agent — build specifics, cho
 
 ## RPi5 flags
 
-````text
+```text
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
 <language-specific-flags>
-```text
+```
 
 ## Notes
 
@@ -251,7 +251,7 @@ makepkg -s
 | Feature | Enabled | Description |
 |---------|---------|-------------|
 | <name>  | yes/no  | <what it does> |
-```text
+```
 
 ### 5. Create directory and commit
 
@@ -264,7 +264,7 @@ mkdir packages/<pkg-name>
 git add packages/<pkg-name>
 git commit -m "feat: add <pkg-name> <version>"
 git push
-```text
+```
 
 ### 6. Update root AGENTS.md and README.md
 
@@ -296,5 +296,5 @@ Format: `| <pkg-name> | <one-line description> | <version> |`
 User: "add yazi"
 
 Response: research yazi → find its build options → ask user about each → create PKGBUILD + per-package AGENTS.md/README.md → update root AGENTS.md and README.md → commit → push → monitor CI until deployed.
-````
-````
+```
+`````

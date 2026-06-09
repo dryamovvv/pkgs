@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Update opencode.yml — new-package handler
+## Task 1: Update opencode.yml — new-package handler
 
 **Files:**
 
@@ -228,7 +228,7 @@ git commit -m "feat(ci): add opencode-builder job with ARM runner and build retr
 
 ---
 
-### Task 2: Update opencode.yml — code-review job
+## Task 2: Update opencode.yml — code-review job
 
 **Files:**
 
@@ -296,7 +296,7 @@ git commit -m "feat(ci): add structured PKGBUILD review with critical checks"
 
 ---
 
-### Task 3: Replace check-updates.sh with pkgctl version check
+## Task 3: Replace check-updates.sh with pkgctl version check
 
 **Files:**
 
@@ -421,7 +421,7 @@ git commit -m "feat(ci): replace update check with pkgctl version (nvchecker)"
 
 ---
 
-### Task 4: Update lint.yml — add namcap PKGBUILD check
+## Task 4: Update lint.yml — add namcap PKGBUILD check
 
 **Files:**
 
@@ -481,7 +481,7 @@ git commit -m "feat(ci): add namcap and sha256sums validation to lint"
 
 ---
 
-### Task 5: Add Telegram notifications to critical workflows
+## Task 5: Add Telegram notifications to critical workflows
 
 **Files:**
 
@@ -534,7 +534,7 @@ git commit -m "feat(ci): add Telegram notifications for critical failures"
 
 ---
 
-### Task 6: Ensure all secrets and vars are documented
+## Task 6: Ensure all secrets and vars are documented
 
 **Files:**
 

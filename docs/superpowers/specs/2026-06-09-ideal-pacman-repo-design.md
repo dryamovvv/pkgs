@@ -14,6 +14,7 @@ Architecture for an Arch Linux aarch64 16K-first pacman repository hosted on Git
 - **Architecture:** aarch64, 16K pages, Cortex-A76 optimization
 - **Scope:** Arch Linux ARM `base` group + custom packages (50-200)
 - **Pacman config:**
+
   ```ini
   [custom-repo]
   SigLevel = Required TrustedOnly
@@ -22,7 +23,7 @@ Architecture for an Arch Linux aarch64 16K-first pacman repository hosted on Git
 
 ## Architecture & Data Flow
 
-```
+```text
                     ┌─────────────────────────────┐
                     │  check-updates.yml           │
                     │  (scheduled every 4h)         │
@@ -160,7 +161,7 @@ Every build-capable agent has access to:
 
 The agent receives this structured prompt:
 
-```
+```text
 You are an Arch Linux package maintainer adding a new package to an aarch64
 RPi5-optimized repository.
 
@@ -234,7 +235,7 @@ Create packages/<name>/AGENTS.md with:
 
 ### Prompt: modify-package Agent
 
-```
+```text
 You are updating an existing package.
 
 ## Input
@@ -267,7 +268,7 @@ Simple prompt: remove directory, remove from docs tables, create PR.
 
 ### Prompt: bug-fix Agent
 
-```
+```text
 A CI build or package has failed.
 
 1. Read the issue — get CI run URL and error description
@@ -281,7 +282,7 @@ A CI build or package has failed.
 
 ### Prompt: code-review Agent
 
-```
+```text
 You are reviewing an Arch Linux PKGBUILD PR. Your quality standards:
 
 ## Critical checks (fail = request changes)

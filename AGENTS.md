@@ -6,6 +6,8 @@
 
 <!-- RESEARCH FIRST: Always research best practices via Google + Context7 before implementing anything. Never reinvent wheels. Verify everything works in practice before considering done. -->
 
+<!-- LABELS: see docs/github/labels.md for label definitions and AI behavior rules -->
+
 ## Architecture
 
 Монорепозиторий пакетов Arch Linux aarch64, оптимизированный под Raspberry Pi 5 (Cortex-A76). Сборка — на нативных ARM64 GitHub-раннерах (`ubuntu-24.04-arm`), хостинг — удалённый сервер (`dryam.ru`).

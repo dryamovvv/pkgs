@@ -1,0 +1,57 @@
+# pkgs — Arch Linux aarch64 Package Repository
+
+> Optimized Arch Linux aarch64 package repository for Raspberry Pi 5 (Cortex-A76). Packages are built on native ARM64 GitHub runners with cortex-a76 + crypto optimizations and 16K page alignment, then deployed to `pkgs.dryam.ru`.
+
+Critical notes:
+
+- This is a **third-party** repository, not the official Arch Linux ARM repository. Add it above ALARM in pacman.conf.
+- All packages and the repo database are GPG-signed (RSA 4096). SigLevel = Required TrustedOnly is enforced.
+- The repo uses 16K ELF page alignment (`-Wl,-z,max-page-size=0x4000`) for compatibility with the linux-rpi-16k kernel.
+- Repository maintenance is AI-agent-driven via GitHub Issues and the opencode skill system.
+
+## Packages
+
+- [atuin](http://pkgs.dryam.ru/aarch64/atuin): Shell history with sync
+- [bat](http://pkgs.dryam.ru/aarch64/bat): cat(1) clone with wings
+- [delta](http://pkgs.dryam.ru/aarch64/delta): Syntax-highlighting pager for git
+- [dust](http://pkgs.dryam.ru/aarch64/dust): More intuitive version of du
+- [dysk](http://pkgs.dryam.ru/aarch64/dysk): ls-like command for disks
+- [erd](http://pkgs.dryam.ru/aarch64/erd): Modern filesystem and disk-usage utility
+- [eza](http://pkgs.dryam.ru/aarch64/eza): Modern maintained replacement for ls
+- [fd](http://pkgs.dryam.ru/aarch64/fd): Simple, fast alternative to find
+- [fzf](http://pkgs.dryam.ru/aarch64/fzf): Command-line fuzzy finder
+- [grex](http://pkgs.dryam.ru/aarch64/grex): Command-line tool for generating regex
+- [helix](http://pkgs.dryam.ru/aarch64/helix): Modal terminal-based text editor
+- [hyperfine](http://pkgs.dryam.ru/aarch64/hyperfine): Command-line benchmarking tool
+- [just](http://pkgs.dryam.ru/aarch64/just): Command runner
+- [just-lsp](http://pkgs.dryam.ru/aarch64/just-lsp): Language server for just
+- [kmscon](http://pkgs.dryam.ru/aarch64/kmscon): KMS/DRM-based virtual console
+- [linux-rpi-16k](http://pkgs.dryam.ru/aarch64/linux-rpi-16k): Raspberry Pi 5 kernel (16K pages, RPi Foundation fork)
+- [marksman](http://pkgs.dryam.ru/aarch64/marksman): Markdown LSP server
+- [mdv](http://pkgs.dryam.ru/aarch64/mdv): Browser-quality Markdown viewer for terminal
+- [mozillavpn](http://pkgs.dryam.ru/aarch64/mozillavpn): Fast, secure VPN by Mozilla
+- [procs](http://pkgs.dryam.ru/aarch64/procs): Modern replacement for ps
+- [ripgrep](http://pkgs.dryam.ru/aarch64/ripgrep): Fast grep replacement (binary: rg)
+- [starship](http://pkgs.dryam.ru/aarch64/starship): Minimal, blazing-fast prompt for any shell
+- [taplo](http://pkgs.dryam.ru/aarch64/taplo): TOML toolkit
+- [zellij](http://pkgs.dryam.ru/aarch64/zellij): Terminal workspace with batteries included
+- [zoxide](http://pkgs.dryam.ru/aarch64/zoxide): Smarter cd command
+
+## Docs
+
+- [AGENTS.md](https://github.com/dryamovvv/pkgs/blob/main/AGENTS.md): Complete repository architecture, RPi5 optimization flags, workflow documentation, and package list
+- [CONTRIBUTING.md](https://github.com/dryamovvv/pkgs/blob/main/CONTRIBUTING.md): Contribution guide covering the AI-driven issue workflow
+- [SECURITY.md](https://github.com/dryamovvv/pkgs/blob/main/SECURITY.md): Security policy and GPG key details
+- [README.md](https://github.com/dryamovvv/pkgs/blob/main/README.md): Quick-start guide, pacman configuration, and CI overview
+
+## CI
+
+- [build.yml](https://github.com/dryamovvv/pkgs/blob/main/.github/workflows/build.yml): Package build matrix with Docker, ccache, and artifact caching
+- [opencode.yml](https://github.com/dryamovvv/pkgs/blob/main/.github/workflows/opencode.yml): AI agent workflows (builder, review, analysis)
+- [lint.yml](https://github.com/dryamovvv/pkgs/blob/main/.github/workflows/lint.yml): namcap + markdownlint + sha256sums validation
+
+## Optional
+
+- [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): Changelog standard used by this project
+- [Semantic Versioning](https://semver.org/spec/v2.0.0.html): Versioning standard
+- [llmstxt.org](https://llmstxt.org/): The /llms.txt file specification

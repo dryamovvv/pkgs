@@ -28,23 +28,58 @@ if [ -f PKGBUILD ]; then
 	sed 's/\r$//' PKGBUILD >>"$TMP_IN"
 fi
 
-# Extract source and sha256sums blocks (if present)
-awk '/^source=\(/,/^\)/{if(!/^source=\(/ && !/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' >/tmp/ci_sources_$$.txt || true
-awk '/^sha256sums=\(/,/^\)/{if(!/^sha256sums=\(/ && !/^\)/) print}' PKGBUILD 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/^ *//;s/ *$//' | sed 's/ /\n/g' >/tmp/ci_sums_$$.txt || true
+# Extract source and sha256sums arrays by sourcing PKGBUILD in a subshell.
+# This is more robust than AWK range patterns which break on:
+#   - Multi-line vs single-line array formatting
+#   - Comments containing parentheses
+#   - Arrays with complex quoting
+declare -a _sources=()
+declare -a _shasums=()
+if [ -f PKGBUILD ]; then
+	_extracted=$(bash -c '
+		source "$1" >/dev/null 2>&1 || true
+		printf "___SOURCES___\n"
+		if declare -p source &>/dev/null 2>/dev/null; then
+			for s in "${source[@]}"; do
+				printf "%s\n" "$s"
+			done
+		fi
+		printf "___SHASUMS___\n"
+		if declare -p sha256sums &>/dev/null 2>/dev/null; then
+			for s in "${sha256sums[@]}"; do
+				printf "%s\n" "$s"
+			done
+		fi
+	' _ PKGBUILD 2>/dev/null) || true
+
+	_section=""
+	while IFS= read -r line; do
+		case "$line" in
+			___SOURCES___) _section="sources" ;;
+			___SHASUMS___) _section="shasums" ;;
+			*)
+				case "$_section" in
+					sources) [ -n "$line" ] && _sources+=("$line") ;;
+					shasums) [ -n "$line" ] && _shasums+=("$line") ;;
+				esac
+				;;
+		esac
+	done <<<"$_extracted"
+fi
 
 # Handle declared sha256sums in PKGBUILD
-if [ ! -s /tmp/ci_sums_$$.txt ]; then
+if [ "${#_shasums[@]}" -eq 0 ]; then
 	echo "WARNING: PKGBUILD missing sha256sums or sha256sums is empty in $pkgdir" >&2
 	echo "---SHA256SUMS_DECLARED---" >>"$TMP_IN"
 	echo "MISSING_SHA256S" >>"$TMP_IN"
 else
-	if [ -s /tmp/ci_sources_$$.txt ]; then
+	if [ "${#_sources[@]}" -gt 0 ]; then
 		echo "---SOURCES---" >>"$TMP_IN"
-		cat /tmp/ci_sources_$$.txt >>"$TMP_IN"
+		printf '%s\n' "${_sources[@]}" >>"$TMP_IN"
 	fi
 
 	echo "---SHA256SUMS_DECLARED---" >>"$TMP_IN"
-	cat /tmp/ci_sums_$$.txt >>"$TMP_IN"
+	printf '%s\n' "${_shasums[@]}" >>"$TMP_IN"
 fi
 
 # Determine repo root early (needed for CI files and local source resolution)
@@ -56,58 +91,44 @@ fi
 # For local source files, compute their sha256 and include
 # This ensures sources that reference repo-local files (patches, extras) are accounted for
 echo "---LOCAL_SOURCE_FILES---" >>"$TMP_IN"
-if [ -s /tmp/ci_sources_$$.txt ]; then
-	while IFS= read -r src; do
-		[ -z "$src" ] && continue
-		# ignore URLs (scheme)
-		if printf '%s' "$src" | grep -qE '^[a-zA-Z][a-zA-Z0-9+.-]*://'; then
-			echo "URL:$src" >>"$TMP_IN"
+for src in "${_sources[@]}"; do
+	[ -z "$src" ] && continue
+	# ignore URLs (scheme) — handles both direct URLs and file::URL syntax
+	if printf '%s' "$src" | grep -qE '^[a-zA-Z][a-zA-Z0-9+.-]*://'; then
+		echo "URL:$src" >>"$TMP_IN"
+		continue
+	fi
+
+	# 1) Try direct file relative to package dir
+	if [ -f "$src" ]; then
+		sha=$(sha256sum "$src" | awk '{print $1}')
+		echo "$sha  $src" >>"$TMP_IN"
+		continue
+	fi
+
+	# 2) Try searching upward from package dir up to repo root (covers ../patches, ../../common/ etc.)
+	if [ -n "$REPO_ROOT" ]; then
+		curr_dir="$(pwd)"
+		found=""
+		d="$curr_dir"
+		while :; do
+			if [ -f "$d/$src" ]; then
+				sha=$(sha256sum "$d/$src" | awk '{print $1}')
+				echo "$sha  $d/$src" >>"$TMP_IN"
+				found=1
+				break
+			fi
+			if [ "$d" = "$REPO_ROOT" ] || [ "$d" = "/" ]; then
+				break
+			fi
+			d=$(dirname "$d")
+		done
+		if [ -n "$found" ]; then
 			continue
 		fi
 
-		# 1) Try direct file relative to package dir
-		if [ -f "$src" ]; then
-			sha=$(sha256sum "$src" | awk '{print $1}')
-			echo "$sha  $src" >>"$TMP_IN"
-			continue
-		fi
-
-		# 2) Try searching upward from package dir up to repo root (covers ../patches, ../../common/ etc.)
-		if [ -n "$REPO_ROOT" ]; then
-			curr_dir="$(pwd)"
-			found=""
-			d="$curr_dir"
-			while :; do
-				if [ -f "$d/$src" ]; then
-					sha=$(sha256sum "$d/$src" | awk '{print $1}')
-					echo "$sha  $d/$src" >>"$TMP_IN"
-					found=1
-					break
-				fi
-				if [ "$d" = "$REPO_ROOT" ] || [ "$d" = "/" ]; then
-					break
-				fi
-				d=$(dirname "$d")
-			done
-			if [ -n "$found" ]; then
-				continue
-			fi
-
-			# 3) Try repo-root based glob expansion
-			matches=$(compgen -G "$REPO_ROOT/$src" 2>/dev/null || true)
-			if [ -n "$matches" ]; then
-				for f in $matches; do
-					if [ -f "$f" ]; then
-						sha=$(sha256sum "$f" | awk '{print $1}')
-						echo "$sha  $f" >>"$TMP_IN"
-					fi
-				done
-				continue
-			fi
-		fi
-
-		# 4) Try glob expansion relative to package dir
-		matches=$(compgen -G "$src" 2>/dev/null || true)
+		# 3) Try repo-root based glob expansion
+		matches=$(compgen -G "$REPO_ROOT/$src" 2>/dev/null || true)
 		if [ -n "$matches" ]; then
 			for f in $matches; do
 				if [ -f "$f" ]; then
@@ -117,11 +138,23 @@ if [ -s /tmp/ci_sources_$$.txt ]; then
 			done
 			continue
 		fi
+	fi
 
-		# Not found locally
-		echo "MISSING:$src" >>"$TMP_IN"
-	done </tmp/ci_sources_$$.txt
-fi
+	# 4) Try glob expansion relative to package dir
+	matches=$(compgen -G "$src" 2>/dev/null || true)
+	if [ -n "$matches" ]; then
+		for f in $matches; do
+			if [ -f "$f" ]; then
+				sha=$(sha256sum "$f" | awk '{print $1}')
+				echo "$sha  $f" >>"$TMP_IN"
+			fi
+		done
+		continue
+	fi
+
+	# Not found locally
+	echo "MISSING:$src" >>"$TMP_IN"
+done
 
 # Hash contents of local package directory files (deterministic order)
 echo "---LOCAL_FILES---" >>"$TMP_IN"
@@ -143,7 +176,7 @@ fi
 # Compute final hash
 HASH=$(sha256sum "$TMP_IN" | awk '{print $1}')
 # Cleanup temp files
-rm -f /tmp/ci_sources_$$.txt /tmp/ci_sums_$$.txt "$TMP_IN" 2>/dev/null || true
+rm -f "$TMP_IN" 2>/dev/null || true
 
 # Sanity check: ensure hash is non-empty
 if [ -z "$HASH" ] || [ "$HASH" = "" ]; then

@@ -162,7 +162,7 @@ jobs:
       # ── Build ──
       - name: Build in container
         if: steps.built-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 90
+        timeout-minutes: 180
         run: |
           mkdir -p /tmp/pacman-cache /tmp/ccache /tmp/cargo-registry /tmp/cargo-git
           docker rm -f builder 2>/dev/null || true

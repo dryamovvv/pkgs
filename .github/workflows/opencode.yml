@@ -27,7 +27,9 @@ jobs:
     if: |
       github.event_name != 'workflow_dispatch' &&
       github.event_name != 'pull_request' &&
-      !contains(github.event.issue.labels.*.name || '', 'ci-failure')
+      !contains(github.event.issue.labels.*.name || '', 'ci-failure') &&
+      !contains(github.event.issue.labels.*.name || '', 'new-package') &&
+      !contains(github.event.issue.labels.*.name || '', 'modify-package')
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -211,6 +213,7 @@ jobs:
           github.event_name == 'issue_comment' &&
           !contains(github.event.comment.body, 'opencode[bot]') &&
           !contains(github.event.issue.labels.*.name, 'new-package') &&
+          !contains(github.event.issue.labels.*.name, 'modify-package') &&
           !contains(github.event.issue.labels.*.name, 'ci-failure')
         uses: anomalyco/opencode/github@latest
         env:
@@ -235,10 +238,51 @@ jobs:
             2. Respond helpfully. If a feature/change is requested, implement it if possible.
             3. Comment on the issue with your response.
 
-      - name: Run opencode (new-package comment)
+  opencode-builder:
+    if: |
+      (github.event_name == 'issues' &&
+       (contains(github.event.issue.labels.*.name, 'new-package') ||
+        contains(github.event.issue.labels.*.name, 'modify-package'))) ||
+      (github.event_name == 'issue_comment' &&
+       !contains(github.event.comment.body, 'opencode[bot]') &&
+       (contains(github.event.issue.labels.*.name, 'new-package') ||
+        contains(github.event.issue.labels.*.name, 'modify-package')))
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure git identity
+        run: |
+          git config user.name "opencode[bot]"
+          git config user.email "opencode[bot]@users.noreply.github.com"
+
+      - name: Clear checkout auth header (prevents duplicate with opencode)
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
+
+      - name: Configure git credentials for push
+        run: |
+          git config --global credential.helper store
+          echo "https://x-access-token:${{ github.token }}@github.com" > ~/.git-credentials
+          chmod 600 ~/.git-credentials
+
+      - name: Install uv (for arch-mcp)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run opencode (new-package)
         if: |
-          github.event_name == 'issue_comment' &&
-          !contains(github.event.comment.body, 'opencode[bot]') &&
+          github.event_name == 'issues' &&
           contains(github.event.issue.labels.*.name, 'new-package')
         uses: anomalyco/opencode/github@latest
         env:
@@ -251,23 +295,155 @@ jobs:
           share: true
           use_github_token: true
           prompt: |
-            A user commented on issue #${{ github.event.issue.number }}:
+            Add a new package to the Arch Linux aarch64 repository.
 
-            **Issue title:** ${{ github.event.issue.title }}
+            **Issue:** ${{ github.event.issue.title }}
+            ${{ github.event.issue.body }}
+
+            ## Execution Plan (execute ALL steps, do NOT skip any)
+
+            ### Phase 1: Research
+            1. Extract package name from the issue.
+            2. Find upstream repo, latest release tag, build system:
+               - Use arch-mcp (search_aur, search_archwiki, get_official_package_info) for existing PKGBUILDs
+               - Use Context7 for build system docs (CMake, Meson, Cargo, autotools)
+               - Use web search for missing info (latest version, dependencies)
+            3. Identify ALL optional features:
+               - CMake: read CMakeLists.txt (option(), set(... CACHE BOOL))
+               - Meson: read meson_options.txt, meson.build options
+               - Cargo: check Cargo.toml [features]
+               - Autotools: run ./configure --help
+            4. Enable ALL optional features; disable tests; enable docs.
+
+            ### Phase 2: Implementation
+            5. Create branch: add-package/{name}
+            6. Write packages/{name}/PKGBUILD:
+               - Enable ALL features (every optional dependency in depends/optdepends)
+               - RPi5 flags: CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe", LDFLAGS="-Wl,-z,max-page-size=0x4000"
+               - Rust: RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"
+               - Go: GOFLAGS="-ldflags=-extldflags=-Wl,-z,max-page-size=0x4000" GOARCH=arm64 GOARM64=v8.2
+               - tests=false, debug=stripped, docs=enabled
+               - Include sha256sums (download source, compute with sha256sum)
+               - Follow Arch packaging conventions
+            7. Write packages/{name}/.nvchecker.toml:
+               - Run pkgctl release --nvchecker to bootstrap config
+               - Set source (github/tags or similar), version pattern
+            8. Write packages/{name}/README.md:
+               - Description, build deps, features table (enabled/disabled)
+            9. Write packages/{name}/AGENTS.md:
+               - Package name, version, build system, RPi5 flags, CI notes
+
+            ### Phase 3: Build Verification (up to 5 attempts)
+            10. Commit: git add -A && git commit -m "feat: add {name} {version}"
+            11. Push branch: git push origin add-package/{name}
+            12. Check CI status (poll every 60s, up to 20 min):
+                gh run list --branch add-package/{name} --workflow build.yml --limit 1 --json status,conclusion,databaseId
+            13. If CI passes: create PR, comment on issue with PR link.
+            14. If CI fails (up to 5 retries):
+                - Read logs: gh run view <run-id> --log
+                - Identify failure cause, fix PKGBUILD, commit, push
+                - Re-check CI; repeat up to 5 total attempts
+            15. If all 5 attempts fail: comment on issue with failure details; do NOT create PR.
+
+      - name: Run opencode (modify-package)
+        if: |
+          github.event_name == 'issues' &&
+          contains(github.event.issue.labels.*.name, 'modify-package')
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        with:
+          model: ${{ vars.OPEncode_MODEL || 'opencode/deepseek-v4-flash-free' }}
+          share: true
+          use_github_token: true
+          prompt: |
+            A package modification request was opened.
+
+            **Issue:** ${{ github.event.issue.title }}
+            **Body:**
+            ${{ github.event.issue.body }}
+
+            ## Execution Plan (execute ALL steps)
+
+            ### Phase 1: Research
+            1. Extract package name from the issue — must be an EXISTING package in packages/.
+            2. Read current packages/{pkg-name}/PKGBUILD, AGENTS.md, README.md, .nvchecker.toml
+            3. Understand the change request.
+            4. Research upstream: new release, new features, new dependencies
+               - Use arch-mcp, Context7, web search
+            5. Check for new optional features if updating version.
+
+            ### Phase 2: Apply Changes
+            6. Create branch: modify-package/{pkg-name} from main
+            7. Apply all changes:
+               - Update PKGBUILD (version, features, deps, flags)
+               - Update .nvchecker.toml if version source changed
+               - Update AGENTS.md, README.md if features changed
+               - Preserve RPi5 Cortex-A76 optimization flags
+            8. Do NOT modify unrelated packages or CI scripts.
+            9. Commit: git add -A && git commit -m "fix({pkg-name}): <description>"
+
+            ### Phase 3: Build Verification (up to 5 attempts)
+            10. Push branch: git push origin modify-package/{pkg-name}
+            11. Check CI status (poll every 60s, up to 20 min)
+            12. If CI passes: create PR, comment on issue.
+            13. If CI fails (up to 5 retries): read logs, fix, re-push, re-check.
+            14. If all 5 fail: comment with failure details.
+
+      - name: Run opencode (issue comment on new-package/modify-package)
+        if: |
+          github.event_name == 'issue_comment' &&
+          !contains(github.event.comment.body, 'opencode[bot]')
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        with:
+          model: ${{ vars.OPEncode_MODEL || 'opencode/deepseek-v4-flash-free' }}
+          share: true
+          use_github_token: true
+          prompt: |
+            A user commented on a package issue.
+
+            **Issue #${{ github.event.issue.number }} — ${{ github.event.issue.title }}**
             **Comment:**
             ${{ github.event.comment.body }}
 
-            ## Your task
+            ## Execution Plan
 
-            1. Read the FULL issue history (previous comments) to understand context.
-               Use `gh issue view ${{ github.event.issue.number }} --comments` to get all comments.
-            2. If the comment requests changes to an existing package (e.g., "disable X feature", "change version"):
-               - Find the existing branch `add-package/{pkg-name}` (or auto-fix branch)
-               - Checkout the branch, make the changes, commit, push
-               - Comment on the issue confirming what was changed
-            3. If this is part of the new-package flow and all questions are answered:
-               - Follow the add-package skill to create PKGBUILD and open a PR
-             4. Comment on the issue with your response.
+            ### Phase 1: Context
+            1. Read full issue history: gh issue view ${{ github.event.issue.number }} --comments
+            2. Determine user request (change version, disable/enable feature, etc.)
+            3. Identify package name and existing branch.
+
+            ### Phase 2: Implementation
+            4. If comment requests changes:
+               - Find existing branch (add-package/{name} or modify-package/{name})
+               - Checkout branch, make changes, commit, push
+            5. If new-package flow and all questions answered:
+               - Follow full new-package process (research all features, create PKGBUILD with ALL features, .nvchecker.toml, docs)
+            6. Comment on issue with response and PR links.
+
+            ### Phase 3: Build Verification
+            7. Wait for CI; if fails, fix and re-push (up to 5 attempts)
+            8. Comment on issue with outcome.
+
+      - name: Notify admin on critical failure
+        if: failure() && env.TELEGRAM_BOT_TOKEN != ''
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            ❌ AI Agent failed: ${{ github.event.issue.title }}
+            Repo: ${{ github.repository }}
+            Label: ${{ join(github.event.issue.labels.*.name, ', ') }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   opencode-review:
     if: github.event_name == 'pull_request'
@@ -284,21 +460,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Auto-approve AI-generated PRs
-        if: github.event.action == 'opened'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.event.pull_request.head.ref }}
-        run: |
-          if echo "$BRANCH" | grep -qE '^(add-package|modify-package|remove-package|auto-fix|opencode)/'; then
-            echo "Auto-approving AI-generated PR: $BRANCH"
-            gh pr review ${{ github.event.pull_request.number }} --approve \
-              --body "LGTM. Automated approval — CI will verify the build." \
-              --repo ${{ github.repository }}
-          else
-            echo "Human PR: review-only mode (no auto-approve)"
-          fi
-
       - name: Run opencode PR review
         uses: anomalyco/opencode/github@latest
         env:
@@ -312,20 +473,33 @@ jobs:
           share: true
           use_github_token: true
           prompt: |
-            A PR needs code review:
+            You are reviewing an Arch Linux PKGBUILD PR. Quality standards:
 
-            **PR:** ${{ github.event.pull_request.html_url }}
-            **Title:** ${{ github.event.pull_request.title }}
-            **Branch:** ${{ github.event.pull_request.head.ref }}
+            ## Critical checks (fail = request changes)
+            1. PKGBUILD syntax: bash -n must pass
+            2. Required fields: pkgname, pkgver, pkgrel, pkgdesc, arch, url, license, depends, source, sha256sums
+            3. sha256sums correct (not empty, not placeholder)
+            4. Architecture: must include aarch64 (not x86_64 only)
+            5. RPi5 flags: CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe", LDFLAGS="-Wl,-z,max-page-size=0x4000"
+            6. Tests disabled: BUILD_TESTING=OFF, --disable-tests, etc.
+            7. No absolute paths in source=()
+            8. .nvchecker.toml present alongside PKGBUILD
 
-            ## Your task
+            ## Quality checks (warn but don't block)
+            1. namcap warnings on PKGBUILD
+            2. pkgdesc is descriptive (>10 chars)
+            3. License file included in package()
+            4. README.md and AGENTS.md present with accurate content
 
-            1. Review the PR diff: `gh pr diff ${{ github.event.pull_request.number }}`
-            2. Check for issues in the changed files and write your review findings.
-            3. Only submit a review if you find actual problems:
-               `gh pr review ${{ github.event.pull_request.number }} --request-changes -b "<issues>"`
-            4. If the PR looks correct, do nothing — do not approve.
-               Human reviewers handle approval for non-AI PRs.
+            ## Review flow
+            1. gh pr diff ${{ github.event.pull_request.number }} — read the full diff
+            2. Check each critical item
+            3. If any critical fails: gh pr review ${{ github.event.pull_request.number }} --request-changes with specific line refs
+            4. If only quality warnings: gh pr review ${{ github.event.pull_request.number }} --comment with suggestions
+            5. If all clear: gh pr review ${{ github.event.pull_request.number }} --approve
+            6. Comment summary of what was checked
+
+            If this is a re-review (PR was updated after previous review), only check items that were flagged before.
 
   auto-fix-runner:
     if: github.event_name == 'workflow_dispatch'

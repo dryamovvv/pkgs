@@ -1,0 +1,4 @@
+dryamovvv/archlinux-rpi5-aarch64
+dryamovvv/arch-mcp
+dryamovvv/rpi5-netinstall
+dryamovvv/pkgs

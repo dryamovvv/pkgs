@@ -27,7 +27,7 @@
 
 ## Текущая архитектура кэширования
 
-```
+```text
 push → detect (какие пакеты изменились) → build-per-pkg:
   1. compute-build-hash (PKGBUILD + sha256sums + local files + ci/build-package.sh)
   2. built-cache restore/save (только .pkg.tar.* / .sig, не вся build-директория)
@@ -35,7 +35,7 @@ push → detect (какие пакеты изменились) → build-per-pkg
      └─ cache-miss: Docker build → docker cp → upload
   4. ccache, cargo, pacman — вспомогательные кэши с restore-keys
 → deploy (скачивает все artifacts → деплоит на ubuntu-24.04-arm)
-```
+```text
 
 ### Размеры кэшей
 

@@ -6,7 +6,7 @@ Linux kernel and modules (RPi Foundation fork) with 16K pagesize for bcm2712/RPi
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

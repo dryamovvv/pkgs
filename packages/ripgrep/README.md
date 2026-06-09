@@ -6,7 +6,7 @@ A tool for searching files by regex (binary: rg)
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

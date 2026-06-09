@@ -162,7 +162,7 @@ jobs:
       # ── Build ──
       - name: Build in container
         if: steps.built-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 90
+        timeout-minutes: 180
         run: |
           mkdir -p /tmp/pacman-cache /tmp/ccache /tmp/cargo-registry /tmp/cargo-git
           docker rm -f builder 2>/dev/null || true
@@ -274,6 +274,16 @@ jobs:
       - name: Stop deploy container
         if: always()
         run: docker rm -f deployer 2>/dev/null || true
+
+      - name: Notify admin on deploy failure
+        if: failure() && env.TELEGRAM_BOT_TOKEN != ''
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            ❌ Build/Deploy failed: ${{ github.repository }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   create-failure-issue:
     needs: [detect-changed-packages, build-packages-matrix]

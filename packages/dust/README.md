@@ -6,7 +6,7 @@ A more intuitive version of du
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

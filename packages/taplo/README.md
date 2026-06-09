@@ -6,7 +6,7 @@ A TOML toolkit
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

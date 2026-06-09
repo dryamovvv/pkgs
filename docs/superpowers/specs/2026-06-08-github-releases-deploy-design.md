@@ -19,7 +19,7 @@ Replace SCP+flock deployment to remote server with GitHub Releases as the pacman
 
 ### Architecture
 
-```
+```text
 deploy-packages job (ubuntu-24.04-arm)
 ├── Docker container (lfdevs/archlinuxarm:base-devel)
 │   ├── Install github-cli via pacman
@@ -28,7 +28,7 @@ deploy-packages job (ubuntu-24.04-arm)
 │   ├── repo-add -R -s repo.db.tar.gz *.pkg.tar.* (new packages only)
 │   ├── gh release upload --clobber → updated db files + new packages
 │   └── Generate and upload index.html
-```
+```text
 
 ### Flow
 
@@ -45,7 +45,7 @@ deploy-packages job (ubuntu-24.04-arm)
 [custom-repo]
 SigLevel = Required TrustedOnly
 Server = https://github.com/dryamovvv/pkgs/releases/latest/download
-```
+```text
 
 ### Removed vs kept
 

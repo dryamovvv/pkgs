@@ -6,7 +6,7 @@ A modern, cross-platform filesystem and disk-usage utility (binary: erd)
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

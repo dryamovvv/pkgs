@@ -59,11 +59,13 @@ prepare() {
   cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
   cd "$srcdir/$pkgname-$pkgver"
   patch -p1 < "$srcdir/0002-go-nil-check-cgroups.patch"
-  pip install --break-system-packages glean_parser
+  python -m venv "$srcdir/python-venv"
+  "$srcdir/python-venv/bin/pip" install glean_parser
 }
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
+  export PATH="$srcdir/python-venv/bin:$PATH"
   export CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
   export CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe -Wno-error=unused-result"
   export LDFLAGS="-Wl,-z,max-page-size=0x4000"

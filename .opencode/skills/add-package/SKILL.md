@@ -52,7 +52,7 @@ Use the `question` tool for interactive selection. Never decide for the user.
 
 ### 3. Create PKGBUILD
 
-```bash
+`````bash
 # Maintainer: dryamovvv <dryamovvv@users.noreply.github.com>
 # Contributor: dryamovvv (Arch Linux package)
 # Optimized for Raspberry Pi 5 (Cortex-A76)
@@ -121,7 +121,7 @@ package() {
   # Install systemd services, polkit rules, etc.
   install -Dm644 "$srcdir/<service>" "$pkgdir/usr/lib/systemd/system/<service>"
 }
-```
+```text
 
 **PKGBUILD rules:**
 
@@ -148,7 +148,7 @@ prepare() {
   git submodule update --init --recursive
   # ... extra setup
 }
-```
+```text
 
 ### `.install` file (post-install hooks)
 
@@ -167,25 +167,24 @@ post_upgrade() {
 pre_remove() {
   # cleanup before removal
 }
-```
+```text
 
 ### RPi5 Cortex-A76 optimization (all compilers)
 
 **Mandatory** for ALL code in ALL languages:
 
-````
+```text
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
+```
 
-``
-
-| Флаг                           | Значение                                                                                             |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `-mcpu=cortex-a76+crypto`      | ARMv8.2-A + AES/SHA/PMULL; includes crc, lse, rdma, fp16, dotprod, rcpc                              |
-| `-O2`                          | Standard optimization (enables `-fomit-frame-pointer` on AArch64)                                    |
-| `-pipe`                        | Pipes instead of temporary files                                                                    |
-| `-Wl,-z,max-page-size=0x4000`  | 16K ELF segment alignment — ARM64 page size on RPi5                                                  |
+| Флаг                          | Значение                                                                |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `-mcpu=cortex-a76+crypto`     | ARMv8.2-A + AES/SHA/PMULL; includes crc, lse, rdma, fp16, dotprod, rcpc |
+| `-O2`                         | Standard optimization (enables `-fomit-frame-pointer` on AArch64)       |
+| `-pipe`                       | Pipes instead of temporary files                                        |
+| `-Wl,-z,max-page-size=0x4000` | 16K ELF segment alignment — ARM64 page size on RPi5                     |
 
 - **Rust:** `RUSTFLAGS="-C target-cpu=cortex-a76 -C opt-level=2"`
 - **Go:** `GOFLAGS="-ldflags=-extldflags=-Wl,-z,max-page-size=0x4000" GOARCH=arm64 GOARM64=v8.2`
@@ -207,18 +206,18 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
 
 Generate `packages/<pkg-name>/AGENTS.md` (for the agent — build specifics, chosen features, flag rationale):
 
-```markdown
+````markdown
 # <pkg-name>
 
-| Attribute | Value |
-|-----------|-------|
-| Version | `<version>` |
-| Build system | `<build-system>` |
-| Features | `<enabled-features>` |
+| Attribute    | Value                |
+| ------------ | -------------------- |
+| Version      | `<version>`          |
+| Build system | `<build-system>`     |
+| Features     | `<enabled-features>` |
 
 ## RPi5 flags
 
-```
+```text
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
@@ -228,7 +227,7 @@ LDFLAGS="-Wl,-z,max-page-size=0x4000"
 ## Notes
 
 <gotchas, quirks, why certain opts were chosen>
-```
+```text
 
 Generate `packages/<pkg-name>/README.md` (for humans — package summary, build instructions):
 
@@ -241,7 +240,7 @@ Generate `packages/<pkg-name>/README.md` (for humans — package summary, build 
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 
@@ -297,4 +296,5 @@ Format: `| <pkg-name> | <one-line description> | <version> |`
 User: "add yazi"
 
 Response: research yazi → find its build options → ask user about each → create PKGBUILD + per-package AGENTS.md/README.md → update root AGENTS.md and README.md → commit → push → monitor CI until deployed.
-````
+```
+`````

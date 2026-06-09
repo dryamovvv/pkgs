@@ -8,12 +8,12 @@
 
 ## RPi5 flags
 
-```
+```text
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
 GOARCH=arm64 GOARM64=v8.2
-```
+```text
 
 Go ldflags include `-extldflags=-Wl,-z,max-page-size=0x4000` for 16K ELF alignment.
 

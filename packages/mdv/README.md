@@ -6,7 +6,7 @@ Browser-quality Markdown viewer for the terminal. Uses Kitty Graphics Protocol f
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

@@ -6,12 +6,12 @@
 
 ## Подключение репозитория на RPi5
 
-```ini
+````ini
 # /etc/pacman.conf — добавьте в конец:
 [custom-repo]
 SigLevel = Required TrustedOnly
 Server = http://pkgs.dryam.ru/aarch64
-```
+```text
 
 Импортируйте ключ подписи:
 
@@ -21,7 +21,7 @@ sudo pacman-key --recv-keys 0F98FE406BB366EB10AFAD8D90B35929BB827D35
 sudo pacman-key --add keys/pgp/BB827D35.asc
 sudo pacman-key --lsign-key 0F98FE406BB366EB10AFAD8D90B35929BB827D35
 sudo pacman -Sy
-```
+```text
 
 ## Флаги оптимизации
 
@@ -32,11 +32,11 @@ sudo pacman -Sy
 | `-pipe`                       | Пайпы вместо временных файлов                                  |
 | `-Wl,-z,max-page-size=0x4000` | 16K ELF-сегменты (размер страницы RPi5)                        |
 
-```
+```text
 CFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 CXXFLAGS="-mcpu=cortex-a76+crypto -O2 -pipe"
 LDFLAGS="-Wl,-z,max-page-size=0x4000"
-```
+```text
 
 Доп. компиляторы: Rust (`-C target-cpu=cortex-a76 -C opt-level=2`), Go (`GOARCH=arm64 GOARM64=v8.2`).
 
@@ -48,13 +48,13 @@ mkdir -p packages/<pkg-name>
 git add packages/<pkg-name>
 git commit -m "feat: add <pkg-name>"
 git push
-```
+```text
 
 CI автоматически соберёт и задеплоит пакет.
 
 ## Структура
 
-```
+```text
 pkgs/
 ├── keys/
 │   └── pgp/
@@ -70,7 +70,7 @@ pkgs/
 ├── .github/workflows/
 │   └── build.yml          # CI/CD: detect → build+deploy matrix
 └── README.md
-```
+```text
 
 ## CI
 
@@ -109,3 +109,23 @@ pkgs/
 | taplo         | TOML toolkit                                           | 0.10.0  |
 | zellij        | Terminal workspace with batteries included             | 0.44.3  |
 | zoxide        | Smarter cd command                                     | 0.9.9   |
+
+## Required GitHub Secrets
+
+| Secret               | Description                                       |
+| -------------------- | ------------------------------------------------- |
+| `GPG_PRIVATE_KEY`    | ASCII-armored GPG private key for package signing |
+| `GPG_PASSPHRASE`     | Passphrase for the GPG key                        |
+| `GPG_KEY_ID`         | GPG key fingerprint                               |
+| `OPENCODE_API_KEY`   | API key for opencode AI agent                     |
+| `CONTEXT7_API_KEY`   | API key for Context7 library docs                 |
+| `EXA_API_KEY`        | API key for Exa web search                        |
+| `TELEGRAM_BOT_TOKEN` | (Optional) Telegram bot token for notifications   |
+| `TELEGRAM_CHAT_ID`   | (Optional) Telegram chat ID for notifications     |
+
+## Required GitHub Variables
+
+| Variable         | Description                                                                   |
+| ---------------- | ----------------------------------------------------------------------------- |
+| `OPEncode_MODEL` | (Optional) LLM model for opencode, default: `opencode/deepseek-v4-flash-free` |
+````

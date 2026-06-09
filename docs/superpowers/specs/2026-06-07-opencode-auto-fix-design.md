@@ -17,7 +17,7 @@ Automate CI failure recovery: when a build fails, opencode is triggered to read 
 
 ### Flow
 
-```
+```text
 build.yml fails
   ├─ report-failure job ──► creates/updates GitHub issue (labels: ci-failure, fix-attempt-N)
   └─ workflow_run event ──► opencode.yml auto-fix job triggers
@@ -32,7 +32,7 @@ main push ──► build.yml triggers again
   ├─ success ──► opencode comments "Fixed!" ──► issue closed
   └─ failure ──► report-failure increments attempt ──► repeat (up to 3)
       └─ attempt 3 failed ──► label "unfixable" ──► STOP
-```
+```text
 
 ## Components
 
@@ -71,7 +71,7 @@ report-failure:
           # Create new issue
           # Labels: ci-failure, fix-attempt-1
         fi
-```
+```text
 
 Key behaviors:
 
@@ -144,7 +144,7 @@ jobs:
             3. Fix the PKGBUILD or related files
             4. Commit and push to main with message "fix(ci): auto-fix <pkg> build failure"
             5. Comment on the issue with what was fixed
-```
+```text
 
 ### 3. Loop prevention
 

@@ -6,7 +6,7 @@ A language server for just
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

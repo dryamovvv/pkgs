@@ -6,7 +6,7 @@ A modern, maintained replacement for ls
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

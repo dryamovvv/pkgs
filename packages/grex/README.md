@@ -6,7 +6,7 @@ A command-line tool for generating regular expressions
 
 ```bash
 makepkg -s
-```
+```text
 
 ## Dependencies
 

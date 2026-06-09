@@ -20,9 +20,9 @@ All features enabled:
 
 ## Installation
 
-```bash
+````bash
 sudo pacman -S atuin
-```
+```text
 
 Then add to your shell:
 
@@ -35,20 +35,20 @@ echo 'eval "$(atuin init zsh)"' >> ~/.zshrc
 
 # fish
 echo 'atuin init fish | source' >> ~/.config/fish/config.fish
-```
+```text
 
 ## Self-hosted server
 
 ```bash
 sudo systemctl enable --now atuin-server
-```
+```text
 
 Configure at `/etc/atuin/server.toml`.
 
 ## Repository
 
-```
+```text
 [custom-repo]
 SigLevel = Optional TrustedOnly
 Server = https://dryamovvv.github.io/pkgs/aarch64
-```
+````

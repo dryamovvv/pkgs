@@ -2,7 +2,7 @@ name: Check upstream updates
 
 on:
   schedule:
-    - cron: '0 */4 * * *'  # Every 4 hours
+    - cron: "0 */4 * * *"
   workflow_dispatch:
 
 permissions:
@@ -15,7 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Check for updates
+      - name: Pull Arch Linux ARM Docker image
+        run: docker pull lfdevs/archlinuxarm:base-devel
+
+      - name: Check for updates via pkgctl
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

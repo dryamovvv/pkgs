@@ -433,6 +433,18 @@ jobs:
             7. Wait for CI; if fails, fix and re-push (up to 5 attempts)
             8. Comment on issue with outcome.
 
+      - name: Notify admin on critical failure
+        if: failure() && env.TELEGRAM_BOT_TOKEN != ''
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            ❌ AI Agent failed: ${{ github.event.issue.title }}
+            Repo: ${{ github.repository }}
+            Label: ${{ join(github.event.issue.labels.*.name, ', ') }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
   opencode-review:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

@@ -51,9 +51,8 @@ for pkgdir in /workspace/packages/*/; do
 	for f in "$pkgdir"/*.pkg.tar.*; do
 		[ -f "$f" ] || continue
 		basename="${f##*/}"
-		# skip .sig files for now (handled below)
-		[[ "$basename" == *.sig ]] && continue
 		cp "$f" "$WORKDIR/"
+		[[ "$basename" == *.sig ]] && continue
 		NEW_PKGS+=("$WORKDIR/$basename")
 	done
 done

@@ -6,7 +6,7 @@
 
 ## Подключение репозитория на RPi5
 
-```ini
+````ini
 # /etc/pacman.conf — добавьте в конец:
 [custom-repo]
 SigLevel = Required TrustedOnly
@@ -109,3 +109,23 @@ pkgs/
 | taplo         | TOML toolkit                                           | 0.10.0  |
 | zellij        | Terminal workspace with batteries included             | 0.44.3  |
 | zoxide        | Smarter cd command                                     | 0.9.9   |
+
+## Required GitHub Secrets
+
+| Secret               | Description                                       |
+| -------------------- | ------------------------------------------------- |
+| `GPG_PRIVATE_KEY`    | ASCII-armored GPG private key for package signing |
+| `GPG_PASSPHRASE`     | Passphrase for the GPG key                        |
+| `GPG_KEY_ID`         | GPG key fingerprint                               |
+| `OPENCODE_API_KEY`   | API key for opencode AI agent                     |
+| `CONTEXT7_API_KEY`   | API key for Context7 library docs                 |
+| `EXA_API_KEY`        | API key for Exa web search                        |
+| `TELEGRAM_BOT_TOKEN` | (Optional) Telegram bot token for notifications   |
+| `TELEGRAM_CHAT_ID`   | (Optional) Telegram chat ID for notifications     |
+
+## Required GitHub Variables
+
+| Variable         | Description                                                                   |
+| ---------------- | ----------------------------------------------------------------------------- |
+| `OPEncode_MODEL` | (Optional) LLM model for opencode, default: `opencode/deepseek-v4-flash-free` |
+````

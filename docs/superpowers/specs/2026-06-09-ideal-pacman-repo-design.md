@@ -406,7 +406,7 @@ Users interact with the repository via GitHub Issues:
 
 ## Repository Structure
 
-```
+```text
 pkgs/
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
